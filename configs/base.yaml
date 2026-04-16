@@ -1,0 +1,6 @@
+seed: 0
+paths:
+  data_root: data
+  activations: data/activations
+  probes: data/probes
+  logs: logs

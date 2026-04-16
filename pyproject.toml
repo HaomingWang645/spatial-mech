@@ -1,0 +1,39 @@
+[project]
+name = "spatial-subspace"
+version = "0.1.0"
+description = "Probing 3D spatial subspaces in video VLM hidden states"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.24",
+    "scipy>=1.11",
+    "scikit-learn>=1.3",
+    "pandas>=2.0",
+    "pyarrow>=14.0",
+    "Pillow>=10.0",
+    "pyyaml>=6.0",
+    "einops>=0.7",
+    "tqdm>=4.66",
+]
+
+[project.optional-dependencies]
+vlm = [
+    "torch>=2.1",
+    "transformers>=4.49",
+    "accelerate>=0.30",
+    "qwen-vl-utils>=0.0.8",
+]
+dev = [
+    "pytest>=7.4",
+    "ruff>=0.4",
+]
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

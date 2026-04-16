@@ -1,0 +1,7 @@
+name: Qwen2.5-VL-7B
+hf_id: Qwen/Qwen2.5-VL-7B-Instruct
+torch_dtype: bfloat16
+device: cuda
+patch_size: 14
+merge_size: 2              # 2x2 merger → each visual token covers 28x28 px
+prompt: "Describe the spatial layout of the objects in this image."

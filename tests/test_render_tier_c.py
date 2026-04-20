@@ -17,6 +17,7 @@ from spatial_subspace.utils import load_yaml
 
 
 CONFIG = Path(__file__).resolve().parents[1] / "configs" / "tier_c.yaml"
+CONFIG_FREE6DOF = Path(__file__).resolve().parents[1] / "configs" / "tier_c_free6dof.yaml"
 
 
 def test_look_at_world_origin_projects_to_image_center():
@@ -123,6 +124,56 @@ def test_render_tier_c_object_visibility_across_orbit(tmp_path):
         seen |= set(int(x) for x in np.unique(m)) - {0}
     expected = {o.object_id + 1 for o in scene.objects}
     assert seen == expected, f"missing objects in mask: {expected - seen}"
+
+
+def test_free6dof_trajectory_varies_radius_altitude_and_roll():
+    cfg = load_yaml(CONFIG_FREE6DOF)
+    rng = random.Random(0)
+    scene = generate_3d_scene(cfg, rng, tier="3D")
+    poses = sample_trajectory(scene, cfg, rng, traj_idx=0)
+    assert len(poses) == cfg["n_frames"]
+
+    eyes = np.array([p[0] for p in poses])
+    targets = np.array([p[1] for p in poses])
+    rolls = np.array([p[2] for p in poses])
+
+    # Altitude must actually vary (orbit mode keeps it constant).
+    assert eyes[:, 2].std() > 0.05, "free6dof altitude should drift"
+    # Distance from scene center (radius) should also vary.
+    radii = np.linalg.norm(eyes[:, :2] - eyes[:, :2].mean(axis=0), axis=1)
+    assert radii.std() > 0.1, "free6dof orbit radius should drift"
+    # Look-at should drift, not stay locked at scene center.
+    assert targets.std(axis=0).sum() > 0.05, "free6dof look-at should drift"
+    # Roll should vary frame-to-frame and be bounded by config.
+    roll_max = math.radians(cfg["trajectory"]["free6dof"]["roll_max_degrees"])
+    assert rolls.std() > 0.0
+    assert np.max(np.abs(rolls)) <= roll_max + 1e-9
+
+
+def test_free6dof_every_frame_has_at_least_one_visible_object(tmp_path):
+    """Visibility-repair must guarantee ≥1 object per frame in the rendered mask."""
+    cfg = load_yaml(CONFIG_FREE6DOF)
+    rng = random.Random(3)
+    scene = generate_3d_scene(cfg, rng, tier="3D")
+    out = render_tier_c(scene, cfg, tmp_path, rng, traj_idx=0)
+    scene_dir = tmp_path / out.scene_id
+
+    for f in out.frames:
+        m = np.array(Image.open(scene_dir / f.mask_path))
+        ids = set(int(x) for x in np.unique(m)) - {0}
+        assert ids, f"frame {f.frame_id} has no visible object in mask"
+    assert out.extras["trajectory_mode"] == "free6dof"
+
+
+def test_free6dof_two_trajectories_are_different():
+    cfg = load_yaml(CONFIG_FREE6DOF)
+    rng = random.Random(0)
+    scene = generate_3d_scene(cfg, rng, tier="3D")
+    poses_a = sample_trajectory(scene, cfg, rng, traj_idx=0)
+    poses_b = sample_trajectory(scene, cfg, rng, traj_idx=1)
+    eyes_a = np.array([p[0] for p in poses_a])
+    eyes_b = np.array([p[0] for p in poses_b])
+    assert np.linalg.norm(eyes_a - eyes_b, axis=1).mean() > 1.0
 
 
 def test_render_tier_c_two_trajectories_produce_different_first_frames(tmp_path):

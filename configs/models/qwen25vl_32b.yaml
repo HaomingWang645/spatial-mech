@@ -1,0 +1,8 @@
+name: Qwen2.5-VL-32B
+hf_id: Qwen/Qwen2.5-VL-32B-Instruct
+torch_dtype: bfloat16
+device: cuda          # input-tensor placement
+device_map: auto      # shard weights across all visible GPUs
+patch_size: 14
+merge_size: 2
+prompt: "Describe the spatial layout of the objects in this image."

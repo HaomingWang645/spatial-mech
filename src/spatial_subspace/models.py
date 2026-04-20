@@ -44,15 +44,21 @@ class Qwen25VLWrapper:
         hf_id: str = "Qwen/Qwen2.5-VL-7B-Instruct",
         torch_dtype: str = "bfloat16",
         device: str = "cuda",
+        device_map: str | None = None,
     ):
+        """``device`` is where input tensors live; ``device_map`` (if given)
+        is passed to ``from_pretrained`` for model sharding. For a single-GPU
+        load use device="cuda" and leave device_map unset. For multi-GPU
+        sharding use device="cuda" and device_map="auto" (or a dict)."""
         import torch
         from transformers import AutoProcessor, Qwen2_5_VLForConditionalGeneration
 
         self._torch = torch
         dtype = getattr(torch, torch_dtype)
         self.processor = AutoProcessor.from_pretrained(hf_id)
+        load_map = device_map if device_map is not None else device
         self.model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
-            hf_id, torch_dtype=dtype, device_map=device
+            hf_id, torch_dtype=dtype, device_map=load_map
         )
         self.model.eval()
         self.device = device

@@ -76,6 +76,13 @@ def main() -> int:
     p.add_argument("--mlp", action="store_true")
     p.add_argument("--pairwise", action="store_true")
     p.add_argument("--pca-ks", type=str, default="2,4,8,16,32,64")
+    p.add_argument(
+        "--t-min", type=int, default=None,
+        help="If set, aggregate the per-(scene,object) summary over only "
+             "temporal tokens with frame_id >= t-min (latter frames).",
+    )
+    p.add_argument("--alpha", type=float, default=1.0,
+                   help="Ridge regularization strength.")
     args = p.parse_args()
 
     set_seed(args.seed)
@@ -94,6 +101,10 @@ def main() -> int:
 
     for layer in layers:
         meta_raw, vecs_raw = load_layer(activ, layer)
+        if args.t_min is not None:
+            # Keep only rows at temporal tokens >= t_min. vec_row still
+            # indexes the full vecs_raw array, so aggregation stays correct.
+            meta_raw = meta_raw[meta_raw["frame_id"] >= args.t_min].reset_index(drop=True)
         meta, pooled = object_summary(meta_raw, vecs_raw)
         labels = build_labels(meta)
 
@@ -111,12 +122,12 @@ def main() -> int:
             "n_test": int(test_mask.sum()),
         }
 
-        linear = fit_linear_probe(X, y, Xv, yv)
+        linear = fit_linear_probe(X, y, Xv, yv, alpha=args.alpha)
         row["linear_r2"] = linear.r2
         row["linear_procrustes"] = linear.extras["procrustes"]
 
         for k in pca_ks:
-            pres = fit_pca_linear(X, y, Xv, yv, k=k)
+            pres = fit_pca_linear(X, y, Xv, yv, k=k, alpha=args.alpha)
             row[f"pca{k}_r2"] = pres.r2
 
         if args.mlp:

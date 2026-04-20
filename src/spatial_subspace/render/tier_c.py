@@ -51,8 +51,13 @@ def look_at(
     eye: np.ndarray,
     target: np.ndarray,
     up: np.ndarray = np.array([0.0, 0.0, 1.0]),
+    roll: float = 0.0,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """Build (R, t) such that p_cam = R @ p_world + t."""
+    """Build (R, t) such that p_cam = R @ p_world + t.
+
+    ``roll`` rotates the (x, y) image basis around the camera forward axis,
+    giving the 6th DoF on top of the (eye, target) pose.
+    """
     eye = np.asarray(eye, dtype=np.float64)
     target = np.asarray(target, dtype=np.float64)
     up = np.asarray(up, dtype=np.float64)
@@ -68,6 +73,12 @@ def look_at(
         norm = np.linalg.norm(x)
     x /= norm
     y = np.cross(z, x)
+
+    if roll != 0.0:
+        cr, sr = math.cos(roll), math.sin(roll)
+        x_new = cr * x + sr * y
+        y_new = -sr * x + cr * y
+        x, y = x_new, y_new
 
     R = np.stack([x, y, z], axis=0)
     t = -R @ eye
@@ -96,18 +107,103 @@ def project(
 # ---------------------------------------------------------------------------
 
 
-def sample_trajectory(
+Pose = tuple[np.ndarray, np.ndarray, float]  # (eye, target, roll)
+
+
+def _smooth_noise(
+    n_frames: int,
+    n_modes: int,
+    amp: float,
+    rng: random.Random,
+    dim: int = 1,
+) -> np.ndarray:
+    """Smooth low-frequency noise of shape (n_frames, dim) bounded by ±amp.
+
+    Sum of ``n_modes`` sinusoids with random phases and 1/k amplitude decay,
+    then per-dim peak-normalized so the trajectory just touches ±amp. Smooth
+    in the strong sense: derivative is bounded and continuous.
+    """
+    if n_modes <= 0 or amp == 0.0:
+        return np.zeros((n_frames, dim))
+    t = np.linspace(0.0, 1.0, n_frames)
+    out = np.zeros((n_frames, dim))
+    for d in range(dim):
+        for k in range(1, n_modes + 1):
+            phi = rng.uniform(0.0, 2.0 * math.pi)
+            a = rng.uniform(-1.0, 1.0) / k
+            out[:, d] += a * np.sin(2.0 * math.pi * k * t + phi)
+        peak = float(np.max(np.abs(out[:, d]))) + 1e-9
+        out[:, d] *= amp / peak
+    return out
+
+
+def _has_visible_object(
+    eye: np.ndarray,
+    target: np.ndarray,
+    roll: float,
+    scene: Scene,
+    K: np.ndarray,
+    image_size: int,
+    cfg: dict[str, Any],
+    min_r_px: float,
+    margin_px: float,
+) -> bool:
+    R, t = look_at(eye, target, roll=roll)
+    f = float(K[0, 0])
+    for obj in scene.objects:
+        proj = project(np.array(obj.centroid), R, t, K)
+        if proj is None:
+            continue
+        u, v, depth = proj
+        size_world = float(cfg["sizes"][obj.size])
+        r_px = f * size_world / depth
+        if r_px < min_r_px:
+            continue
+        # Some part of the disc must overlap the image
+        if u < -r_px - margin_px or u > image_size + r_px + margin_px:
+            continue
+        if v < -r_px - margin_px or v > image_size + r_px + margin_px:
+            continue
+        return True
+    return False
+
+
+def _repair_visibility(
+    eye: np.ndarray,
+    target: np.ndarray,
+    roll: float,
+    scene: Scene,
+    K: np.ndarray,
+    image_size: int,
+    cfg: dict[str, Any],
+    max_iters: int,
+    min_r_px: float,
+    margin_px: float,
+) -> tuple[np.ndarray, np.ndarray, float]:
+    """If no object is visible at the proposed pose, blend the look-at point
+    toward the closest object's centroid until at least one object lands on
+    the image. Falls back to snapping target onto that centroid.
+    """
+    if _has_visible_object(eye, target, roll, scene, K, image_size, cfg, min_r_px, margin_px):
+        return eye, target, roll
+    coords = np.array([o.centroid for o in scene.objects], dtype=np.float64)
+    d2 = np.sum((coords[:, :2] - target[:2]) ** 2, axis=1)
+    anchor = coords[int(np.argmin(d2))].copy()
+    for k in range(1, max_iters + 1):
+        alpha = k / max_iters
+        candidate = (1.0 - alpha) * target + alpha * anchor
+        if _has_visible_object(eye, candidate, roll, scene, K, image_size, cfg, min_r_px, margin_px):
+            return eye, candidate, roll
+    return eye, anchor, roll
+
+
+def _sample_orbit_trajectory(
     scene: Scene,
     cfg: dict[str, Any],
     rng: random.Random,
     traj_idx: int,
-) -> list[tuple[np.ndarray, np.ndarray]]:
-    """One smooth orbit pose per frame.
-
-    ``traj_idx`` selects from the (radius, altitude) pairs in ``cfg.trajectory``
-    and also flips orbit direction and start angle, so different ``traj_idx``
-    values for the same scene give meaningfully different camera paths.
-    """
+) -> list[Pose]:
+    """Original 1-DoF planar orbit: fixed altitude, fixed look-at, zero roll."""
     n = int(cfg["n_frames"])
     tcfg = cfg["trajectory"]
     radii = list(tcfg["radii"])
@@ -126,7 +222,7 @@ def sample_trajectory(
     direction = 1.0 if traj_idx % 2 == 0 else -1.0
 
     arc = math.radians(arc_deg)
-    poses: list[tuple[np.ndarray, np.ndarray]] = []
+    poses: list[Pose] = []
     for i in range(n):
         frac = i / max(1, n - 1)
         angle = start_angle + direction * arc * frac
@@ -137,8 +233,107 @@ def sample_trajectory(
                 altitude,
             ]
         )
-        poses.append((eye, target))
+        poses.append((eye, target.copy(), 0.0))
     return poses
+
+
+def _sample_free6dof_trajectory(
+    scene: Scene,
+    cfg: dict[str, Any],
+    rng: random.Random,
+    traj_idx: int,
+) -> list[Pose]:
+    """6-DoF random smooth trajectory (plan §3.3 spec).
+
+    Eye is a base orbit + smooth (radius, altitude, xyz) drift.
+    Look-at is scene center + smooth xyz drift.
+    Roll is smooth around 0.
+
+    After sampling, each frame is repaired to guarantee at least one object
+    is visible (centroid on-image with apparent radius ≥ ``visibility_min_radius_px``).
+    """
+    n = int(cfg["n_frames"])
+    tcfg = cfg["trajectory"]
+    fcfg = tcfg.get("free6dof", {})
+
+    base_radii = list(fcfg.get("base_radii", tcfg.get("radii", [8.0])))
+    base_altitudes = list(fcfg.get("base_altitudes", tcfg.get("altitudes", [3.5])))
+    arc_deg = float(fcfg.get("arc_degrees", tcfg.get("arc_degrees", 220.0)))
+    look_z = float(fcfg.get("look_at_z", tcfg.get("look_at_z", 0.5)))
+
+    n_modes = int(fcfg.get("n_modes", 3))
+    eye_jitter = float(fcfg.get("eye_jitter", 1.0))
+    radius_jitter = float(fcfg.get("radius_jitter", 1.0))
+    altitude_jitter = float(fcfg.get("altitude_jitter", 0.8))
+    target_jitter = float(fcfg.get("target_jitter", 1.2))
+    target_z_jitter = float(fcfg.get("target_z_jitter", 0.4))
+    roll_max = math.radians(float(fcfg.get("roll_max_degrees", 20.0)))
+
+    min_r_px = float(fcfg.get("visibility_min_radius_px", 2.0))
+    margin_px = float(fcfg.get("visibility_margin_px", 0.0))
+    repair_iters = int(fcfg.get("repair_max_iters", 8))
+
+    image_size = int(cfg["image_size"])
+    fov_deg = float(cfg.get("fov_degrees", 60.0))
+    f = image_size / (2.0 * math.tan(math.radians(fov_deg) / 2.0))
+    K = np.array([[f, 0.0, image_size / 2.0], [0.0, f, image_size / 2.0], [0.0, 0.0, 1.0]])
+
+    coords = np.array([o.centroid for o in scene.objects])
+    cx, cy = float(coords[:, 0].mean()), float(coords[:, 1].mean())
+    center = np.array([cx, cy, look_z])
+
+    base_radius = base_radii[traj_idx % len(base_radii)]
+    base_alt = base_altitudes[traj_idx % len(base_altitudes)]
+    n_variants = max(len(base_radii), 1)
+    start_angle = (traj_idx / n_variants) * 2.0 * math.pi
+    direction = 1.0 if traj_idx % 2 == 0 else -1.0
+    arc = math.radians(arc_deg)
+
+    radius_drift = _smooth_noise(n, n_modes, radius_jitter, rng).flatten()
+    altitude_drift = _smooth_noise(n, n_modes, altitude_jitter, rng).flatten()
+    eye_jit = _smooth_noise(n, n_modes, eye_jitter, rng, dim=3)
+    target_xy_jit = _smooth_noise(n, n_modes, target_jitter, rng, dim=2)
+    target_z_jit = _smooth_noise(n, n_modes, target_z_jitter, rng).flatten()
+    roll_seq = _smooth_noise(n, n_modes, roll_max, rng).flatten()
+
+    poses: list[Pose] = []
+    for i in range(n):
+        frac = i / max(1, n - 1)
+        angle = start_angle + direction * arc * frac
+        radius = max(2.0, base_radius + radius_drift[i])
+        altitude = max(0.5, base_alt + altitude_drift[i])
+        eye = (
+            np.array([cx + radius * math.cos(angle), cy + radius * math.sin(angle), altitude])
+            + eye_jit[i]
+        )
+        target = center + np.array([target_xy_jit[i, 0], target_xy_jit[i, 1], target_z_jit[i]])
+        roll = float(roll_seq[i])
+        eye, target, roll = _repair_visibility(
+            eye, target, roll, scene, K, image_size, cfg,
+            max_iters=repair_iters, min_r_px=min_r_px, margin_px=margin_px,
+        )
+        poses.append((eye, target, roll))
+    return poses
+
+
+def sample_trajectory(
+    scene: Scene,
+    cfg: dict[str, Any],
+    rng: random.Random,
+    traj_idx: int,
+) -> list[Pose]:
+    """One pose per frame, dispatched by ``cfg.trajectory.mode``.
+
+    ``traj_idx`` selects from the per-trajectory configuration knobs (radius,
+    altitude, start angle, direction) so different ``traj_idx`` values for the
+    same scene give meaningfully different camera paths in either mode.
+    """
+    mode = str(cfg.get("trajectory", {}).get("mode", "orbit")).lower()
+    if mode == "orbit":
+        return _sample_orbit_trajectory(scene, cfg, rng, traj_idx)
+    if mode == "free6dof":
+        return _sample_free6dof_trajectory(scene, cfg, rng, traj_idx)
+    raise ValueError(f"unknown trajectory mode: {mode!r} (expected 'orbit' or 'free6dof')")
 
 
 # ---------------------------------------------------------------------------
@@ -151,6 +346,7 @@ def _draw_frame(
     cfg: dict[str, Any],
     eye: np.ndarray,
     target: np.ndarray,
+    roll: float = 0.0,
 ) -> tuple[Image.Image, Image.Image, list[list[float]], list[list[float]]]:
     image_size = int(cfg["image_size"])
     bg = int(cfg["background_gray"])
@@ -160,7 +356,7 @@ def _draw_frame(
     cx_px = cy_px = image_size / 2.0
     K = np.array([[f, 0.0, cx_px], [0.0, f, cy_px], [0.0, 0.0, 1.0]])
 
-    R, t = look_at(eye, target, up=np.array([0.0, 0.0, 1.0]))
+    R, t = look_at(eye, target, up=np.array([0.0, 0.0, 1.0]), roll=roll)
 
     # Project all objects, drop ones behind the camera or vanishingly small
     rendered: list[tuple[float, Any, float, float, float]] = []
@@ -225,8 +421,8 @@ def render_tier_c(
     ensure_dir(scene_dir / "masks")
 
     new_frames: list[Frame] = []
-    for i, (eye, target) in enumerate(poses):
-        img, mask, K, E = _draw_frame(scene, cfg, eye, target)
+    for i, (eye, target, roll) in enumerate(poses):
+        img, mask, K, E = _draw_frame(scene, cfg, eye, target, roll=roll)
         img_path = f"frames/{i:03d}.png"
         mask_path = f"masks/{i:03d}.png"
         img.save(scene_dir / img_path)
@@ -252,6 +448,7 @@ def render_tier_c(
             "n_frames": int(cfg["n_frames"]),
             "fov_degrees": float(cfg.get("fov_degrees", 60.0)),
             "trajectory_idx": int(traj_idx),
+            "trajectory_mode": str(cfg.get("trajectory", {}).get("mode", "orbit")).lower(),
             "base_scene_id": scene.scene_id,
         },
     )

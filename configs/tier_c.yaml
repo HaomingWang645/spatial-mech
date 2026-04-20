@@ -26,9 +26,32 @@ sizes:
 background_gray: 155
 fov_degrees: 60.0
 trajectory:
+  # mode: "orbit" — original 1-DoF planar arc, fixed altitude and look-at.
+  # mode: "free6dof" — eye drifts in radius/altitude/xyz, look-at drifts in
+  # xyz, camera rolls. Each frame is repaired so ≥1 object is visible.
+  mode: orbit
+
   # Two orbit configurations indexed by traj_idx so each scene can be
   # rendered under multiple independent trajectories (H2 test).
   radii:      [8.0, 9.0]
   altitudes:  [3.5, 4.5]
   look_at_z:  0.5
   arc_degrees: 180.0
+
+  free6dof:
+    # Per-trajectory base orbit knobs (selected by traj_idx).
+    base_radii:     [7.5, 8.5, 9.5, 10.5]
+    base_altitudes: [2.8, 3.8, 4.8, 5.8]
+    arc_degrees:    220.0          # wider arc than the planar orbit
+    n_modes:        3              # smooth-noise frequency basis (per dim)
+    eye_jitter:        1.2         # max world-unit drift on eye xyz
+    radius_jitter:     1.0         # max drift on orbit radius
+    altitude_jitter:   0.8         # max drift on orbit altitude
+    target_jitter:     1.5         # max drift on look-at xy
+    target_z_jitter:   0.4         # max drift on look-at z
+    roll_max_degrees:  20.0        # max camera roll around forward axis
+    visibility_min_radius_px: 2.0  # an object counts as visible if its
+                                   # apparent radius ≥ this AND its disc
+                                   # overlaps the image
+    visibility_margin_px:     0.0
+    repair_max_iters:         8    # blend-toward-anchor iterations

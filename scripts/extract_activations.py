@@ -39,6 +39,7 @@ def main() -> int:
         hf_id=mcfg["hf_id"],
         torch_dtype=mcfg.get("torch_dtype", "bfloat16"),
         device=mcfg.get("device", "cuda"),
+        device_map=mcfg.get("device_map"),
     )
     cfg = ExtractConfig(
         overlap_threshold=args.overlap_threshold,

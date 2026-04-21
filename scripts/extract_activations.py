@@ -12,8 +12,19 @@ import argparse
 from pathlib import Path
 
 from spatial_subspace.extract import ExtractConfig, run_extraction
-from spatial_subspace.models import Qwen25VLWrapper
+from spatial_subspace.models import (
+    InternVL3Wrapper,
+    LlavaOnevisionWrapper,
+    Qwen25VLWrapper,
+)
 from spatial_subspace.utils import load_yaml, set_seed
+
+
+_WRAPPERS = {
+    "qwen25vl": Qwen25VLWrapper,
+    "llava_onevision": LlavaOnevisionWrapper,
+    "internvl3": InternVL3Wrapper,
+}
 
 
 def main() -> int:
@@ -34,8 +45,12 @@ def main() -> int:
 
     set_seed(args.seed)
     mcfg = load_yaml(args.model_config)
+    family = mcfg.get("family", "qwen25vl")
+    if family not in _WRAPPERS:
+        raise SystemExit(f"unknown model family: {family!r}; valid: {sorted(_WRAPPERS)}")
+    wrapper_cls = _WRAPPERS[family]
 
-    wrapper = Qwen25VLWrapper(
+    wrapper = wrapper_cls(
         hf_id=mcfg["hf_id"],
         torch_dtype=mcfg.get("torch_dtype", "bfloat16"),
         device=mcfg.get("device", "cuda"),

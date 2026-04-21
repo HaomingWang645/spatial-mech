@@ -96,6 +96,7 @@ def extract_scene(
 
         _, gh, gw = out.grid
         coverage = mask_to_patch_coverage(mask_resized, (gh, gw), object_ids)
+        visual_positions = out.extras.get("visual_positions")
         start, end = out.visual_token_range
 
         layer_ids = (
@@ -103,7 +104,10 @@ def extract_scene(
         )
         for layer_idx in layer_ids:
             hs = out.hidden_states[layer_idx][0]           # (T, D)
-            visual = hs[start:end].float().cpu().numpy()   # (gh*gw, D)
+            if visual_positions is not None:
+                visual = hs[visual_positions].float().cpu().numpy()
+            else:
+                visual = hs[start:end].float().cpu().numpy()   # (gh*gw, D)
             visual = visual.reshape(gh, gw, -1)
             for oid in object_ids:
                 vec = pool_object_vector(visual, coverage[oid], cfg.overlap_threshold)
@@ -175,13 +179,21 @@ def extract_scene_video(
             merged[oid] = np.mean(np.stack([sc[oid] for sc in slot_covs]), axis=0)
         coverage_per_t.append(merged)
 
+    # Two modes for visual-token extraction from the raw sequence:
+    #   (a) contiguous range  — most models (Qwen2.5-VL, LLaVA-OV post-strip)
+    #   (b) gathered positions — models that interleave frame markers between
+    #       patch runs (e.g. InternVL3 wraps each frame in <img>...</img>)
+    visual_positions = out.extras.get("visual_positions")
     start, end = out.visual_token_range
     layer_ids = (
         cfg.layers if cfg.layers is not None else list(range(len(out.hidden_states)))
     )
     for layer_idx in layer_ids:
         hs = out.hidden_states[layer_idx][0]                    # (T_seq, D)
-        visual = hs[start:end].float().cpu().numpy()            # (t_post*gh*gw, D)
+        if visual_positions is not None:
+            visual = hs[visual_positions].float().cpu().numpy()
+        else:
+            visual = hs[start:end].float().cpu().numpy()        # (t_post*gh*gw, D)
         visual = visual.reshape(t_post, gh, gw, -1)
         for t in range(t_post):
             for oid in object_ids:

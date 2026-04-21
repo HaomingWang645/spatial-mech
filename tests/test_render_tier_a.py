@@ -29,15 +29,35 @@ def test_generate_3d_scene_has_no_frames():
 
 
 def test_generate_3d_scene_objects_dont_overlap_in_xy():
+    """Pairwise check: d(i,j) ≥ r_i + r_j + min_gap (new contract)."""
     cfg = load_yaml(CONFIG)
     rng = random.Random(1)
     scene = generate_3d_scene(cfg, rng, tier="3D")
-    sep = float(cfg["min_separation"])
-    coords = [(o.centroid[0], o.centroid[1]) for o in scene.objects]
-    for i in range(len(coords)):
-        for j in range(i + 1, len(coords)):
-            d2 = (coords[i][0] - coords[j][0]) ** 2 + (coords[i][1] - coords[j][1]) ** 2
-            assert d2 >= sep ** 2 - 1e-9
+    gap = float(cfg.get("min_gap", cfg.get("min_separation", 0.2)))
+    sizes = cfg["sizes"]
+    for i in range(len(scene.objects)):
+        for j in range(i + 1, len(scene.objects)):
+            a, b = scene.objects[i], scene.objects[j]
+            d2 = (a.centroid[0] - b.centroid[0]) ** 2 + (a.centroid[1] - b.centroid[1]) ** 2
+            r_i = float(sizes[a.size])
+            r_j = float(sizes[b.size])
+            need = r_i + r_j + gap
+            assert d2 >= need ** 2 - 1e-9, (
+                f"objects {i} (r={r_i}) and {j} (r={r_j}) overlap: "
+                f"d={d2 ** 0.5:.3f} < {need:.3f}"
+            )
+
+
+def test_generate_3d_scene_shape_color_pairs_are_unique():
+    """Every (shape, color) combination must appear at most once per scene."""
+    cfg = load_yaml(CONFIG)
+    for seed in range(8):
+        rng = random.Random(seed)
+        scene = generate_3d_scene(cfg, rng, tier="3D")
+        combos = [(o.shape, o.color) for o in scene.objects]
+        assert len(set(combos)) == len(combos), (
+            f"seed={seed}: duplicate (shape, color) pair in {combos}"
+        )
 
 
 def test_render_tier_a_from_existing_scene(tmp_path):

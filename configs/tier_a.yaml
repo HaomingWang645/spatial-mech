@@ -7,7 +7,7 @@ working_volume:
   x: [-4.0, 4.0]
   y: [-4.0, 4.0]
 floor_z: 0.0
-min_separation: 1.2
+min_gap: 0.2              # edge-to-edge gap between objects (pairwise r_i+r_j+gap)
 shapes: [cube, sphere, cylinder]
 colors:
   red:     [220, 50, 50]

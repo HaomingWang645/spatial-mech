@@ -1,0 +1,9 @@
+name: InternVL3-38B
+family: internvl3
+hf_id: OpenGVLab/InternVL3-38B-hf
+torch_dtype: bfloat16
+device: cuda          # input-tensor placement
+device_map: auto      # shard ~76 GB across all visible GPUs
+patch_size: 14
+merge_size: 2              # 2x2 pixel-shuffle: 448/14=32 patches → 16x16 tokens per frame
+prompt: "Describe the spatial layout of the objects in this image."

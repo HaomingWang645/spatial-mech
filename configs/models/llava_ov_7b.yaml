@@ -1,0 +1,8 @@
+name: LLaVA-OneVision-7B
+family: llava_onevision
+hf_id: llava-hf/llava-onevision-qwen2-7b-ov-hf
+torch_dtype: bfloat16
+device: cuda
+patch_size: 14
+merge_size: 2              # 2x2 spatial pool: 384/14=27 patches → 14x14 tokens per frame
+prompt: "Describe the spatial layout of the objects in this image."

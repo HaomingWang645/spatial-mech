@@ -117,6 +117,48 @@ class Qwen25VLWrapper:
             h.remove()
         self._handles.clear()
 
+    def install_intervention(
+        self,
+        layer_idx: int,
+        token_positions: list[int],
+        delta,
+    ):
+        """Register a forward_pre_hook on layer ``layer_idx`` that adds
+        ``delta`` (a 1-D tensor of shape (D,)) to the hidden states at each
+        position in ``token_positions`` before the layer executes. Returns a
+        handle whose ``.remove()`` undoes the intervention.
+
+        pre-hook so the perturbation enters the residual stream BEFORE the
+        layer transforms it, matching the plan §6.1 "add Δ to h at layer L"
+        semantics. The capture hooks registered in ``_register_hooks`` fire on
+        the layer's output, so they will record the post-intervention
+        activations for downstream analysis.
+        """
+        torch = self._torch
+        layers = self._locate_layers()
+        target_layer = layers[layer_idx]
+        if not isinstance(delta, torch.Tensor):
+            delta = torch.as_tensor(delta)
+        positions = list(token_positions)
+
+        def pre_hook(_mod, args, kwargs):
+            if args:
+                hs = args[0]
+            elif "hidden_states" in kwargs:
+                hs = kwargs["hidden_states"]
+            else:
+                return None
+            d = delta.to(device=hs.device, dtype=hs.dtype)
+            if positions:
+                idx = torch.as_tensor(positions, device=hs.device, dtype=torch.long)
+                hs[:, idx, :] = hs[:, idx, :] + d
+            if args:
+                return (hs, *args[1:]), kwargs
+            kwargs["hidden_states"] = hs
+            return args, kwargs
+
+        return target_layer.register_forward_pre_hook(pre_hook, with_kwargs=True)
+
     def patch_pixels(self) -> int:
         vc = self.model.config.vision_config
         ps = int(getattr(vc, "patch_size", 14))
@@ -173,7 +215,7 @@ class Qwen25VLWrapper:
 
         self._layer_outputs.clear()
         with torch.no_grad():
-            _ = self.model(**proc_inputs, return_dict=True)
+            model_out = self.model(**proc_inputs, return_dict=True)
 
         input_ids = proc_inputs["input_ids"][0]
         positions = (input_ids == target_token_id).nonzero(as_tuple=True)[0]
@@ -199,9 +241,12 @@ class Qwen25VLWrapper:
                 f"visual token count mismatch: range={end - start} vs grid={expected}"
             )
 
+        extras = {"input_ids": input_ids.cpu(), "is_video": is_video}
+        if getattr(model_out, "logits", None) is not None:
+            extras["logits_last"] = model_out.logits[0, -1, :].detach().float().cpu().numpy()
         return ForwardOut(
             hidden_states=list(self._layer_outputs),
             visual_token_range=(start, end),
             grid=grid,
-            extras={"input_ids": input_ids.cpu(), "is_video": is_video},
+            extras=extras,
         )

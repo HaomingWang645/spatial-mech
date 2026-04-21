@@ -6,7 +6,8 @@ Each frame shows only a window of the scene; the model must integrate across
 frames to recover the full layout.
 
 The camera is purely top-down orthographic, like Tier A — no perspective yet.
-That is reserved for Tier C.
+That is reserved for Tier C. Shadows are rendered using the same fixed
+oblique sun as Tier A (see ``tier_a.SUN_AZ_DEG`` / ``SUN_ELEV_DEG``).
 """
 from __future__ import annotations
 
@@ -20,6 +21,7 @@ from PIL import Image, ImageDraw
 from ..scene import Camera, Frame, Scene
 from ..utils import ensure_dir, load_yaml, set_seed
 from .common import generate_3d_scene
+from .tier_a import SHADOW_RGB, _shadow_offset_world
 
 
 def _world_to_image(
@@ -99,6 +101,20 @@ def _draw_frame(
     draw_img = ImageDraw.Draw(img)
     draw_mask = ImageDraw.Draw(mask)
 
+    # Pass 1: shadows on the ground plane (oblique sun from NW, see tier_a).
+    for obj in scene.objects:
+        size_world = float(cfg["sizes"][obj.size])
+        r = _radius_px(size_world, world_extent, image_size)
+        sdx, sdy = _shadow_offset_world(2.0 * size_world)
+        sc_world = (obj.centroid[0] + sdx, obj.centroid[1] + sdy, 0.0)
+        su, sv = _world_to_image(sc_world, x_range, y_range, image_size)
+        sbbox = (su - r, sv - r, su + r, sv + r)
+        if obj.shape == "cube":
+            draw_img.rectangle(sbbox, fill=SHADOW_RGB)
+        else:
+            draw_img.ellipse(sbbox, fill=SHADOW_RGB)
+
+    # Pass 2: objects (image + mask).
     for obj in scene.objects:
         u, v = _world_to_image(obj.centroid, x_range, y_range, image_size)
         r = _radius_px(cfg["sizes"][obj.size], world_extent, image_size)

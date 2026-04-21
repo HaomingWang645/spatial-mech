@@ -5,18 +5,26 @@ Pipeline is two-stage by design:
     generate_3d_scene(cfg, rng)         -> Scene with objects, frames=[]
     render_tier_a(scene, cfg, out_dir)  -> Scene with tier="A", one Frame
 
-Tier B/C will add their own renderers that consume the same 3D Scenes, so
+Tier B/C add their own renderers that consume the same 3D Scenes, so
 downstream probes see identical ground truth across tiers.
 
 BEV is orthographic by definition so we render with PIL rather than full
-Blender — this gives pixel-exact segmentation masks and ~1000x faster
+Blender — this gives pixel-exact segmentation masks and ~1000× faster
 generation. The underlying scene is still genuinely 3D (objects sit on a
-floor and have real z extents); Tier A just projects it orthographically
-and discards z.
+floor with real z extents); Tier A just projects it orthographically and
+discards z.
+
+Shadows. A strictly vertical sun would hide shadows under the object from
+a top-down view, so we simulate a fixed oblique sun: azimuth ``SUN_AZ_DEG``
+(measured from +x counter-clockwise, so 135° = NW) and elevation
+``SUN_ELEV_DEG``. Each object's shadow is its own ground footprint shifted
+along the sun-opposite direction by ``height / tan(elevation)``, drawn on
+the floor before any object is drawn so shadows never occlude objects.
 """
 from __future__ import annotations
 
 import argparse
+import math
 import random
 from pathlib import Path
 from typing import Any
@@ -26,6 +34,19 @@ from PIL import Image, ImageDraw
 from ..scene import Camera, Frame, Scene
 from ..utils import ensure_dir, load_yaml, set_seed
 from .common import generate_3d_scene
+
+
+SUN_AZ_DEG = 135.0     # sun at NW → shadows cast toward SE
+SUN_ELEV_DEG = 55.0    # elevation; shadow length = height / tan(elev)
+SHADOW_RGB = (85, 85, 85)
+
+
+def _shadow_offset_world(height: float) -> tuple[float, float]:
+    """Ground-plane offset of the shadow of a point at altitude ``height``."""
+    length = height / math.tan(math.radians(SUN_ELEV_DEG))
+    # Shadow direction is opposite to the sun direction.
+    az = math.radians(SUN_AZ_DEG + 180.0)
+    return length * math.cos(az), length * math.sin(az)
 
 
 def _world_to_image(
@@ -65,9 +86,25 @@ def render_tier_a(scene: Scene, cfg: dict[str, Any], out_dir: Path) -> Scene:
     draw_img = ImageDraw.Draw(img)
     draw_mask = ImageDraw.Draw(mask)
 
+    # Pass 1: shadows on the ground — drawn before any object so objects sit
+    # on top of their own and others' shadows.
+    for obj in scene.objects:
+        size_world = float(cfg["sizes"][obj.size])
+        r = _radius_px(size_world, world_range, image_size)
+        sdx, sdy = _shadow_offset_world(2.0 * size_world)
+        sc_world = (obj.centroid[0] + sdx, obj.centroid[1] + sdy, 0.0)
+        su, sv = _world_to_image(sc_world, world_range, image_size)
+        sbbox = (su - r, sv - r, su + r, sv + r)
+        if obj.shape == "cube":
+            draw_img.rectangle(sbbox, fill=SHADOW_RGB)
+        else:
+            draw_img.ellipse(sbbox, fill=SHADOW_RGB)
+
+    # Pass 2: objects (image + mask).
     for obj in scene.objects:
         u, v = _world_to_image(obj.centroid, world_range, image_size)
-        r = _radius_px(cfg["sizes"][obj.size], world_range, image_size)
+        size_world = float(cfg["sizes"][obj.size])
+        r = _radius_px(size_world, world_range, image_size)
         rgb = tuple(cfg["colors"][obj.color])
         bbox = (u - r, v - r, u + r, v + r)
         mid = obj.object_id + 1  # 0 reserved for background

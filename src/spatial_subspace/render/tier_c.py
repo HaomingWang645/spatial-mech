@@ -1,30 +1,32 @@
 """Tier C — perspective ego-video over a 3D scene (plan §3.3).
 
 Same canonical 3D scene as Tier A/B, but rendered with a pinhole perspective
-camera that orbits the scene at a fixed altitude. Each base scene gets *N*
-independent trajectories so we can run the cross-trajectory H2 test.
+camera that orbits the scene. Each base scene gets *N* independent
+trajectories so we can run the cross-trajectory H2 test.
 
-Why a hand-rolled rasterizer instead of Blender / Kubric:
-  - Tier C's purpose is to test whether the model's spatial subspace exists
-    when the input has real depth and parallax, not whether the model can
-    parse photoreal textures or lighting. CLEVR's whole point is "if reasoning
-    fails, it fails on reasoning, not perception" — so we keep the rendering
-    minimal on purpose.
-  - Hard-dependency on Blender / bpy adds 2 GB of binary install plus a
-    GPU-bound render pass per frame, blowing up the per-scene cost from
-    milliseconds to seconds for no information gain on the probing question.
-  - PIL gives pixel-exact segmentation masks for free via the painters
-    algorithm, which is what the extraction pipeline needs.
+Rendering is a hand-rolled PIL rasterizer — good enough for the probing
+question while keeping per-scene cost in the millisecond range. We do two
+things differently from the earlier circle-only version:
 
-Geometry simplification:
-  - All shapes (cube/sphere/cylinder) are rendered as filled circles whose
-    pixel radius is computed from the perspective projection of the object's
-    3D centroid and its world-space size. The model can still perceive depth
-    via apparent size and parallax — what it cannot do is distinguish cube
-    from sphere from cylinder visually. The probe target is *position*, not
-    *shape*, so this does not affect the Q1 / H2 measurement; it only means
-    the auto-generated QA strings about "the red cube" no longer match the
-    visual rendering. We do not use those QA strings in extraction.
+  1. **Proper silhouettes per shape.** Cubes are rendered as the 2D convex
+     hull of their 8 projected corners (a hexagonal silhouette under typical
+     oblique views); cylinders as the convex hull of sampled rim points on
+     top and bottom circles; spheres as a circle at the projected centroid
+     with apparent radius ``f · size / depth`` (the small-angle approximation
+     of a sphere's silhouette is sufficient at the depths used here). The
+     segmentation mask fills exactly the same polygon.
+  2. **Ground shadows.** Each object's silhouette on the floor plane is
+     computed under a fixed oblique sun (NW 135°, elevation 55° — same as
+     Tier A/B); the shadow polygon is the 2D convex hull of the object's
+     ground-plane footprint plus its shadow-shifted copy, projected into the
+     image and filled in a dark grey before any objects are drawn. Two-pass
+     painter order means objects always occlude shadows.
+
+Geometry simplification that remains: shapes are still rigid ideal primitives,
+no per-material lighting, no textures, and we do not render an explicit floor
+grid — just the solid background colour. Adding proper lighting would change
+colour histograms and make colour-name readout harder without affecting the
+spatial-probing question.
 """
 from __future__ import annotations
 
@@ -37,9 +39,10 @@ from typing import Any
 import numpy as np
 from PIL import Image, ImageDraw
 
-from ..scene import Camera, Frame, Scene
+from ..scene import Camera, Frame, Object3D, Scene
 from ..utils import ensure_dir, load_yaml, set_seed
 from .common import generate_3d_scene
+from .tier_a import SHADOW_RGB, _shadow_offset_world
 
 
 # ---------------------------------------------------------------------------
@@ -67,7 +70,6 @@ def look_at(
     x = np.cross(z, up)
     norm = np.linalg.norm(x)
     if norm < 1e-6:
-        # forward parallel to up — pick an alternative up axis
         alt = np.array([1.0, 0.0, 0.0]) if abs(up[0]) < 0.9 else np.array([0.0, 1.0, 0.0])
         x = np.cross(z, alt)
         norm = np.linalg.norm(x)
@@ -103,38 +105,150 @@ def project(
 
 
 # ---------------------------------------------------------------------------
-# Trajectory
+# Geometry → polygon helpers
 # ---------------------------------------------------------------------------
 
 
-Pose = tuple[np.ndarray, np.ndarray, float]  # (eye, target, roll)
+def _convex_hull_2d(points: list[tuple[float, float]]) -> list[tuple[float, float]]:
+    """Andrew's monotone chain. Returns vertices in counter-clockwise order."""
+    pts = sorted(set((round(x, 6), round(y, 6)) for x, y in points))
+    if len(pts) < 3:
+        return pts
+
+    def cross(o, a, b):
+        return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
+
+    lower: list[tuple[float, float]] = []
+    for p in pts:
+        while len(lower) >= 2 and cross(lower[-2], lower[-1], p) <= 0:
+            lower.pop()
+        lower.append(p)
+    upper: list[tuple[float, float]] = []
+    for p in reversed(pts):
+        while len(upper) >= 2 and cross(upper[-2], upper[-1], p) <= 0:
+            upper.pop()
+        upper.append(p)
+    return lower[:-1] + upper[:-1]
 
 
-def _smooth_noise(
-    n_frames: int,
-    n_modes: int,
-    amp: float,
-    rng: random.Random,
-    dim: int = 1,
-) -> np.ndarray:
-    """Smooth low-frequency noise of shape (n_frames, dim) bounded by ±amp.
+def _object_silhouette_samples(
+    obj: Object3D,
+    size_world: float,
+    n_samples: int = 16,
+) -> list[tuple[float, float, float]]:
+    """World-space sample points whose 2D convex hull is the object's silhouette."""
+    cx, cy, cz = obj.centroid
+    floor_z = obj.bbox_min[2]
+    top_z = obj.bbox_max[2]
+    s = size_world
 
-    Sum of ``n_modes`` sinusoids with random phases and 1/k amplitude decay,
-    then per-dim peak-normalized so the trajectory just touches ±amp. Smooth
-    in the strong sense: derivative is bounded and continuous.
+    if obj.shape == "cube":
+        xs = [cx - s, cx + s]
+        ys = [cy - s, cy + s]
+        zs = [floor_z, top_z]
+        return [(x, y, z) for x in xs for y in ys for z in zs]
+
+    if obj.shape == "cylinder":
+        pts: list[tuple[float, float, float]] = []
+        for k in range(n_samples):
+            th = 2.0 * math.pi * k / n_samples
+            px = cx + s * math.cos(th)
+            py = cy + s * math.sin(th)
+            pts.append((px, py, floor_z))
+            pts.append((px, py, top_z))
+        return pts
+
+    if obj.shape == "sphere":
+        # Handled via direct circle projection in _object_drawable, so the
+        # silhouette sampler is only called for non-sphere shapes. Keeping a
+        # fallback here (a sphere's hull is well approximated by rim samples
+        # on a few latitudes) in case the caller uses it anyway.
+        pts = []
+        for i in range(1, 4):
+            phi = math.pi * i / 4.0
+            r_ring = s * math.sin(phi)
+            z = cz + s * math.cos(phi)
+            for k in range(n_samples):
+                th = 2.0 * math.pi * k / n_samples
+                pts.append((cx + r_ring * math.cos(th), cy + r_ring * math.sin(th), z))
+        return pts
+
+    raise ValueError(f"unknown shape: {obj.shape}")
+
+
+def _object_footprint_world(
+    obj: Object3D,
+    size_world: float,
+    n_samples: int = 16,
+) -> list[tuple[float, float, float]]:
+    """Points on the floor plane tracing the object's ground-plane footprint."""
+    cx, cy, _ = obj.centroid
+    floor_z = obj.bbox_min[2]
+    s = size_world
+
+    if obj.shape == "cube":
+        return [
+            (cx - s, cy - s, floor_z),
+            (cx + s, cy - s, floor_z),
+            (cx + s, cy + s, floor_z),
+            (cx - s, cy + s, floor_z),
+        ]
+    # sphere / cylinder: disc of radius s on the floor
+    pts: list[tuple[float, float, float]] = []
+    for k in range(n_samples):
+        th = 2.0 * math.pi * k / n_samples
+        pts.append((cx + s * math.cos(th), cy + s * math.sin(th), floor_z))
+    return pts
+
+
+def _shadow_polygon_world(
+    obj: Object3D,
+    size_world: float,
+    n_samples: int = 16,
+) -> list[tuple[float, float, float]]:
+    """Shadow footprint on the floor: object's ground footprint + its shadow-shifted copy."""
+    sdx, sdy = _shadow_offset_world(2.0 * size_world)
+    base = _object_footprint_world(obj, size_world, n_samples=n_samples)
+    shifted = [(x + sdx, y + sdy, z) for (x, y, z) in base]
+    return base + shifted
+
+
+def _project_points(
+    pts_world: list[tuple[float, float, float]],
+    R: np.ndarray,
+    t: np.ndarray,
+    K: np.ndarray,
+) -> tuple[list[tuple[float, float]], float] | None:
+    """Project world points; return (2D list, mean depth) or None if fewer
+    than three are in front of the camera.
     """
-    if n_modes <= 0 or amp == 0.0:
-        return np.zeros((n_frames, dim))
-    t = np.linspace(0.0, 1.0, n_frames)
-    out = np.zeros((n_frames, dim))
-    for d in range(dim):
-        for k in range(1, n_modes + 1):
-            phi = rng.uniform(0.0, 2.0 * math.pi)
-            a = rng.uniform(-1.0, 1.0) / k
-            out[:, d] += a * np.sin(2.0 * math.pi * k * t + phi)
-        peak = float(np.max(np.abs(out[:, d]))) + 1e-9
-        out[:, d] *= amp / peak
-    return out
+    projected: list[tuple[float, float]] = []
+    depths: list[float] = []
+    for p in pts_world:
+        proj = project(np.asarray(p, dtype=np.float64), R, t, K)
+        if proj is None:
+            continue
+        projected.append((proj[0], proj[1]))
+        depths.append(proj[2])
+    if len(projected) < 3:
+        return None
+    return projected, float(np.mean(depths))
+
+
+def _polygon_touches_image(
+    poly: list[tuple[float, float]], image_size: int, margin: float = 2.0
+) -> bool:
+    min_u = min(p[0] for p in poly)
+    max_u = max(p[0] for p in poly)
+    min_v = min(p[1] for p in poly)
+    max_v = max(p[1] for p in poly)
+    return not (max_u < -margin or min_u > image_size + margin
+                or max_v < -margin or min_v > image_size + margin)
+
+
+# ---------------------------------------------------------------------------
+# Visibility (used by the free-6DoF trajectory to guarantee ≥1 object in-frame)
+# ---------------------------------------------------------------------------
 
 
 def _has_visible_object(
@@ -159,7 +273,6 @@ def _has_visible_object(
         r_px = f * size_world / depth
         if r_px < min_r_px:
             continue
-        # Some part of the disc must overlap the image
         if u < -r_px - margin_px or u > image_size + r_px + margin_px:
             continue
         if v < -r_px - margin_px or v > image_size + r_px + margin_px:
@@ -180,10 +293,6 @@ def _repair_visibility(
     min_r_px: float,
     margin_px: float,
 ) -> tuple[np.ndarray, np.ndarray, float]:
-    """If no object is visible at the proposed pose, blend the look-at point
-    toward the closest object's centroid until at least one object lands on
-    the image. Falls back to snapping target onto that centroid.
-    """
     if _has_visible_object(eye, target, roll, scene, K, image_size, cfg, min_r_px, margin_px):
         return eye, target, roll
     coords = np.array([o.centroid for o in scene.objects], dtype=np.float64)
@@ -197,13 +306,41 @@ def _repair_visibility(
     return eye, anchor, roll
 
 
+# ---------------------------------------------------------------------------
+# Trajectories
+# ---------------------------------------------------------------------------
+
+
+Pose = tuple[np.ndarray, np.ndarray, float]  # (eye, target, roll)
+
+
+def _smooth_noise(
+    n_frames: int,
+    n_modes: int,
+    amp: float,
+    rng: random.Random,
+    dim: int = 1,
+) -> np.ndarray:
+    if n_modes <= 0 or amp == 0.0:
+        return np.zeros((n_frames, dim))
+    t = np.linspace(0.0, 1.0, n_frames)
+    out = np.zeros((n_frames, dim))
+    for d in range(dim):
+        for k in range(1, n_modes + 1):
+            phi = rng.uniform(0.0, 2.0 * math.pi)
+            a = rng.uniform(-1.0, 1.0) / k
+            out[:, d] += a * np.sin(2.0 * math.pi * k * t + phi)
+        peak = float(np.max(np.abs(out[:, d]))) + 1e-9
+        out[:, d] *= amp / peak
+    return out
+
+
 def _sample_orbit_trajectory(
     scene: Scene,
     cfg: dict[str, Any],
     rng: random.Random,
     traj_idx: int,
 ) -> list[Pose]:
-    """Original 1-DoF planar orbit: fixed altitude, fixed look-at, zero roll."""
     n = int(cfg["n_frames"])
     tcfg = cfg["trajectory"]
     radii = list(tcfg["radii"])
@@ -243,15 +380,6 @@ def _sample_free6dof_trajectory(
     rng: random.Random,
     traj_idx: int,
 ) -> list[Pose]:
-    """6-DoF random smooth trajectory (plan §3.3 spec).
-
-    Eye is a base orbit + smooth (radius, altitude, xyz) drift.
-    Look-at is scene center + smooth xyz drift.
-    Roll is smooth around 0.
-
-    After sampling, each frame is repaired to guarantee at least one object
-    is visible (centroid on-image with apparent radius ≥ ``visibility_min_radius_px``).
-    """
     n = int(cfg["n_frames"])
     tcfg = cfg["trajectory"]
     fcfg = tcfg.get("free6dof", {})
@@ -322,18 +450,95 @@ def sample_trajectory(
     rng: random.Random,
     traj_idx: int,
 ) -> list[Pose]:
-    """One pose per frame, dispatched by ``cfg.trajectory.mode``.
-
-    ``traj_idx`` selects from the per-trajectory configuration knobs (radius,
-    altitude, start angle, direction) so different ``traj_idx`` values for the
-    same scene give meaningfully different camera paths in either mode.
-    """
     mode = str(cfg.get("trajectory", {}).get("mode", "orbit")).lower()
     if mode == "orbit":
         return _sample_orbit_trajectory(scene, cfg, rng, traj_idx)
     if mode == "free6dof":
         return _sample_free6dof_trajectory(scene, cfg, rng, traj_idx)
     raise ValueError(f"unknown trajectory mode: {mode!r} (expected 'orbit' or 'free6dof')")
+
+
+# ---------------------------------------------------------------------------
+# Drawables
+# ---------------------------------------------------------------------------
+
+
+def _shadow_drawable(
+    obj: Object3D,
+    cfg: dict[str, Any],
+    R: np.ndarray,
+    t: np.ndarray,
+    K: np.ndarray,
+    image_size: int,
+):
+    size_world = float(cfg["sizes"][obj.size])
+    poly_world = _shadow_polygon_world(obj, size_world)
+    proj = _project_points(poly_world, R, t, K)
+    if proj is None:
+        return None
+    projected, mean_depth = proj
+    hull = _convex_hull_2d(projected)
+    if len(hull) < 3 or not _polygon_touches_image(hull, image_size):
+        return None
+    poly = [(float(u), float(v)) for (u, v) in hull]
+
+    def draw_img(d):
+        d.polygon(poly, fill=SHADOW_RGB)
+
+    return mean_depth, draw_img, None
+
+
+def _object_drawable(
+    obj: Object3D,
+    cfg: dict[str, Any],
+    R: np.ndarray,
+    t: np.ndarray,
+    K: np.ndarray,
+    f: float,
+    image_size: int,
+):
+    size_world = float(cfg["sizes"][obj.size])
+    rgb = tuple(cfg["colors"][obj.color])
+    mid = obj.object_id + 1
+
+    if obj.shape == "sphere":
+        proj = project(np.array(obj.centroid, dtype=np.float64), R, t, K)
+        if proj is None:
+            return None
+        u, v, depth = proj
+        r_px = f * size_world / depth
+        if r_px < 0.5:
+            return None
+        bbox = (u - r_px, v - r_px, u + r_px, v + r_px)
+        if (u + r_px < -2 or u - r_px > image_size + 2
+                or v + r_px < -2 or v - r_px > image_size + 2):
+            return None
+
+        def draw_img(d):
+            d.ellipse(bbox, fill=rgb)
+
+        def draw_mask(d):
+            d.ellipse(bbox, fill=mid)
+
+        return depth, draw_img, draw_mask
+
+    samples = _object_silhouette_samples(obj, size_world)
+    proj = _project_points(samples, R, t, K)
+    if proj is None:
+        return None
+    projected, mean_depth = proj
+    hull = _convex_hull_2d(projected)
+    if len(hull) < 3 or not _polygon_touches_image(hull, image_size):
+        return None
+    poly = [(float(u), float(v)) for (u, v) in hull]
+
+    def draw_img(d):
+        d.polygon(poly, fill=rgb)
+
+    def draw_mask(d):
+        d.polygon(poly, fill=mid)
+
+    return mean_depth, draw_img, draw_mask
 
 
 # ---------------------------------------------------------------------------
@@ -355,36 +560,35 @@ def _draw_frame(
     f = image_size / (2.0 * math.tan(math.radians(fov_deg) / 2.0))
     cx_px = cy_px = image_size / 2.0
     K = np.array([[f, 0.0, cx_px], [0.0, f, cy_px], [0.0, 0.0, 1.0]])
-
     R, t = look_at(eye, target, up=np.array([0.0, 0.0, 1.0]), roll=roll)
 
-    # Project all objects, drop ones behind the camera or vanishingly small
-    rendered: list[tuple[float, Any, float, float, float]] = []
+    shadows = []
+    objects = []
     for obj in scene.objects:
-        proj = project(np.array(obj.centroid), R, t, K)
-        if proj is None:
-            continue
-        u, v, depth = proj
-        size_world = float(cfg["sizes"][obj.size])
-        r_px = f * size_world / depth
-        if r_px < 0.5:
-            continue
-        rendered.append((depth, obj, u, v, r_px))
+        sd = _shadow_drawable(obj, cfg, R, t, K, image_size)
+        if sd is not None:
+            shadows.append(sd)
+        od = _object_drawable(obj, cfg, R, t, K, f, image_size)
+        if od is not None:
+            objects.append(od)
 
-    # Painters algorithm: far → near
-    rendered.sort(key=lambda x: -x[0])
+    # Painter order inside each pass; two passes keep shadows strictly behind
+    # all objects (so a near object can occlude a far object's shadow but a
+    # near object's shadow never occludes a far object's body).
+    shadows.sort(key=lambda x: -x[0])
+    objects.sort(key=lambda x: -x[0])
 
     img = Image.new("RGB", (image_size, image_size), (bg, bg, bg))
     mask = Image.new("L", (image_size, image_size), 0)
     draw_img = ImageDraw.Draw(img)
     draw_mask = ImageDraw.Draw(mask)
 
-    for _depth, obj, u, v, r_px in rendered:
-        rgb = tuple(cfg["colors"][obj.color])
-        bbox = (u - r_px, v - r_px, u + r_px, v + r_px)
-        mid = obj.object_id + 1
-        draw_img.ellipse(bbox, fill=rgb)
-        draw_mask.ellipse(bbox, fill=mid)
+    for _depth, fn_img, _fn_mask in shadows:
+        fn_img(draw_img)
+    for _depth, fn_img, fn_mask in objects:
+        fn_img(draw_img)
+        if fn_mask is not None:
+            fn_mask(draw_mask)
 
     K_list = K.tolist()
     E_list = [

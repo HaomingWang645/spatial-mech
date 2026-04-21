@@ -1,0 +1,8 @@
+name: InternVL3-8B
+family: internvl3
+hf_id: OpenGVLab/InternVL3-8B-hf
+torch_dtype: bfloat16
+device: cuda
+patch_size: 14
+merge_size: 2
+prompt: "Describe the spatial layout of the objects in this image."

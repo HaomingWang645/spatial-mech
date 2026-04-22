@@ -187,11 +187,11 @@ The cleanest architectural insight is F4 (LLaVA-OV vs Qwen-7B): both have the sa
 | [data/activations/tier_c_free6dof_qwen25vl_72b/](../data/activations/tier_c_free6dof_qwen25vl_72b/) | 80 × (parquet, npy) |
 | [data/activations/tier_c_free6dof_llava_ov_7b/](../data/activations/tier_c_free6dof_llava_ov_7b/)   | 28 × (parquet, npy) |
 | [data/activations/tier_c_free6dof_internvl3_38b/](../data/activations/tier_c_free6dof_internvl3_38b/) | 64 × (parquet, npy) |
-| [data/probes/tier_c_free6dof_qwen25vl_7b_camera_depth/camera_depth_probes.{json,png}](../data/probes/tier_c_free6dof_qwen25vl_7b_camera_depth/camera_depth_probes.png) | per-layer probe metrics + 4-panel figure |
-| [data/probes/tier_c_free6dof_qwen25vl_32b_camera_depth/camera_depth_probes.{json,png}](../data/probes/tier_c_free6dof_qwen25vl_32b_camera_depth/camera_depth_probes.png) | ″ |
-| [data/probes/tier_c_free6dof_qwen25vl_72b_camera_depth/camera_depth_probes.{json,png}](../data/probes/tier_c_free6dof_qwen25vl_72b_camera_depth/camera_depth_probes.png) | ″ |
-| [data/probes/tier_c_free6dof_llava_ov_7b_camera_depth/camera_depth_probes.{json,png}](../data/probes/tier_c_free6dof_llava_ov_7b_camera_depth/camera_depth_probes.png) | ″ |
-| [data/probes/tier_c_free6dof_internvl3_38b_camera_depth/camera_depth_probes.{json,png}](../data/probes/tier_c_free6dof_internvl3_38b_camera_depth/camera_depth_probes.png) | ″ |
+| [data/probes/tier_c_free6dof/qwen25vl_7b_camera_depth/camera_depth_probes.{json,png}](../data/probes/tier_c_free6dof/qwen25vl_7b_camera_depth/camera_depth_probes.png) | per-layer probe metrics + 4-panel figure |
+| [data/probes/tier_c_free6dof/qwen25vl_32b_camera_depth/camera_depth_probes.{json,png}](../data/probes/tier_c_free6dof/qwen25vl_32b_camera_depth/camera_depth_probes.png) | ″ |
+| [data/probes/tier_c_free6dof/qwen25vl_72b_camera_depth/camera_depth_probes.{json,png}](../data/probes/tier_c_free6dof/qwen25vl_72b_camera_depth/camera_depth_probes.png) | ″ |
+| [data/probes/tier_c_free6dof/llava_ov_7b_camera_depth/camera_depth_probes.{json,png}](../data/probes/tier_c_free6dof/llava_ov_7b_camera_depth/camera_depth_probes.png) | ″ |
+| [data/probes/tier_c_free6dof/internvl3_38b_camera_depth/camera_depth_probes.{json,png}](../data/probes/tier_c_free6dof/internvl3_38b_camera_depth/camera_depth_probes.png) | ″ |
 | [figures/tier_c_free6dof_models/compare_camera_depth_5models.png](../figures/tier_c_free6dof_models/compare_camera_depth_5models.png) | 4-panel cross-model comparison (headline figure) |
 | [src/spatial_subspace/models.py](../src/spatial_subspace/models.py) | `Qwen25VLWrapper`, `LlavaOnevisionWrapper`, `InternVL3Wrapper` |
 | [scripts/extract_activations.py](../scripts/extract_activations.py) | `--family`-aware dispatch over model configs |

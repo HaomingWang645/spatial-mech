@@ -69,7 +69,7 @@ Per-scene normalized 3D coordinates as labels in both protocols (plan §3.7).
 
 ## Standard probe results
 
-Per-layer Q1 metrics from [data/probes/tier_c_qwen25vl_7b/q1_probes.json](../data/probes/tier_c_qwen25vl_7b/q1_probes.json):
+Per-layer Q1 metrics from [data/probes/tier_c_orbit/qwen25vl_7b_q1/q1_probes.json](../data/probes/tier_c_orbit/qwen25vl_7b_q1/q1_probes.json):
 
 | L | linear R² | Procrustes | PCA-8 | PCA-16 | PCA-32 | pairwise ρ |
 |---|---|---|---|---|---|---|
@@ -93,7 +93,7 @@ Also note: **Tier C maintains R² > 0.86 all the way through layer 27**, while T
 
 ## Cross-trajectory probe results (the H2 test)
 
-Per-layer R² from [data/probes/tier_c_cross_trajectory/cross_trajectory.json](../data/probes/tier_c_cross_trajectory/cross_trajectory.json):
+Per-layer R² from [data/probes/tier_c_orbit/cross_trajectory/cross_trajectory.json](../data/probes/tier_c_orbit/cross_trajectory/cross_trajectory.json):
 
 | L | same_traj | cross_traj (H2) | cross_both |
 |---|---|---|---|
@@ -231,10 +231,10 @@ In rough priority order:
 | [tests/test_render_tier_c.py](../tests/test_render_tier_c.py) | 8 renderer tests (camera math, multi-trajectory, visibility) |
 | [data/tier_c/](../data/tier_c/) | 200 scene-trajectory dirs, 16 frames + 16 masks each |
 | [data/activations/tier_c_qwen25vl_7b/](../data/activations/tier_c_qwen25vl_7b/) | 28 × parquet+npy, 8518 rows/layer |
-| [data/probes/tier_c_qwen25vl_7b/q1_probes.json](../data/probes/tier_c_qwen25vl_7b/q1_probes.json) | Standard Q1 probe metrics |
-| [data/probes/tier_c_cross_trajectory/cross_trajectory.json](../data/probes/tier_c_cross_trajectory/cross_trajectory.json) | Cross-trajectory probe metrics (3 protocols × 28 layers) |
+| [data/probes/tier_c_orbit/qwen25vl_7b_q1/q1_probes.json](../data/probes/tier_c_orbit/qwen25vl_7b_q1/q1_probes.json) | Standard Q1 probe metrics |
+| [data/probes/tier_c_orbit/cross_trajectory/cross_trajectory.json](../data/probes/tier_c_orbit/cross_trajectory/cross_trajectory.json) | Cross-trajectory probe metrics (3 protocols × 28 layers) |
 | [figures/tier_c/q1_layer_dynamics.png](../figures/tier_c/q1_layer_dynamics.png) | Tier C 4-panel layer dynamics |
 | [figures/tier_c/q1_reconstruction_examples.png](../figures/tier_c/q1_reconstruction_examples.png) | Layer-12 reconstructions |
-| [data/probes/tier_c_cross_trajectory/cross_trajectory.png](../data/probes/tier_c_cross_trajectory/cross_trajectory.png) | H2 cross-trajectory comparison |
+| [data/probes/tier_c_orbit/cross_trajectory/cross_trajectory.png](../data/probes/tier_c_orbit/cross_trajectory/cross_trajectory.png) | H2 cross-trajectory comparison |
 | [figures/compare_tier_a_b_c.png](../figures/compare_tier_a_b_c.png) | Tier A vs B vs C 4-panel comparison |
 | [logs/extract_tier_c.log](../logs/extract_tier_c.log) | Extraction log |

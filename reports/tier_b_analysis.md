@@ -55,7 +55,7 @@ Probe code: [src/spatial_subspace/probes.py](../src/spatial_subspace/probes.py) 
 
 ## Layer-by-layer results
 
-Per-layer Q1 probe metrics for Tier B (full table at [data/probes/tier_b_qwen25vl_7b/q1_probes.json](../data/probes/tier_b_qwen25vl_7b/q1_probes.json)):
+Per-layer Q1 probe metrics for Tier B (full table at [data/probes/tier_b/qwen25vl_7b/q1_probes.json](../data/probes/tier_b/qwen25vl_7b/q1_probes.json)):
 
 | L | linear R² | Procrustes | PCA-2 | PCA-8 | PCA-16 | PCA-32 | pairwise ρ |
 |---|---|---|---|---|---|---|---|
@@ -205,7 +205,7 @@ In rough priority order:
 | [data/scenes_3d/](../data/scenes_3d/) | 5000 canonical 3D scenes (`scene.json` only, no frames) |
 | [data/tier_b/](../data/tier_b/) | 200 Tier B scenes — `scene.json` + 16 frames + 16 masks each |
 | [data/activations/tier_b_qwen25vl_7b/](../data/activations/tier_b_qwen25vl_7b/) | Per-layer parquet + npy (28 layers, 3603 rows each) |
-| [data/probes/tier_b_qwen25vl_7b/q1_probes.json](../data/probes/tier_b_qwen25vl_7b/q1_probes.json) | Per-layer probe metrics |
+| [data/probes/tier_b/qwen25vl_7b/q1_probes.json](../data/probes/tier_b/qwen25vl_7b/q1_probes.json) | Per-layer probe metrics |
 | [figures/tier_b/q1_layer_dynamics.png](../figures/tier_b/q1_layer_dynamics.png) | Tier B 4-panel layer dynamics |
 | [figures/tier_b/q1_reconstruction_examples.png](../figures/tier_b/q1_reconstruction_examples.png) | Layer-18 reconstructions for 8 test scenes |
 | [figures/compare_tier_a_vs_b.png](../figures/compare_tier_a_vs_b.png) | Tier A vs Tier B overlay (the headline figure) |

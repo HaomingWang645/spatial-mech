@@ -29,11 +29,37 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from sklearn.linear_model import Ridge
 from sklearn.metrics import r2_score
 
 from spatial_subspace.labels import camera_delta_6d, object_depth_in_camera
 from spatial_subspace.scene import Scene
+
+
+def _fast_ridge_predict(X_tr, y_tr, X_te, alpha):
+    """Closed-form ridge via the smaller normal equation.
+
+    For N < D (common when k heads are concatenated), solves in N-sample space
+    as ``X^T (X X^T + αI_N)^{-1} y``. For N > D, falls back to the D×D normal
+    equation. Centers the target(s) but not X.
+    """
+    X_tr = np.ascontiguousarray(X_tr, dtype=np.float32)
+    X_te = np.ascontiguousarray(X_te, dtype=np.float32)
+    y_tr = np.asarray(y_tr, dtype=np.float32)
+    y_mean = y_tr.mean(axis=0, keepdims=True) if y_tr.ndim > 1 else np.float32(y_tr.mean())
+    y_c = y_tr - y_mean
+    N, D = X_tr.shape
+    if N < D:
+        K = X_tr @ X_tr.T
+        K.flat[:: N + 1] += alpha
+        a = np.linalg.solve(K, y_c)
+        pred = X_te @ (X_tr.T @ a) + y_mean
+    else:
+        A = X_tr.T @ X_tr
+        A.flat[:: D + 1] += alpha
+        B = X_tr.T @ y_c
+        beta = np.linalg.solve(A, B)
+        pred = X_te @ beta + y_mean
+    return pred
 
 
 def _base_scene_id(sid: str) -> str:
@@ -138,8 +164,7 @@ def main() -> int:
             X = vecs_NHd[:, heads, :].reshape(vecs_NHd.shape[0], -1).astype(np.float32)
             if X_mask_tr.sum() < 30 or X_mask_te.sum() < 10:
                 return float("nan")
-            m = Ridge(alpha=args.alpha).fit(X[X_mask_tr], y[X_mask_tr])
-            p = m.predict(X[X_mask_te])
+            p = _fast_ridge_predict(X[X_mask_tr], y[X_mask_tr], X[X_mask_te], args.alpha)
             if y.ndim == 1:
                 return float(r2_score(y[X_mask_te], p))
             return float(r2_score(y[X_mask_te], p, multioutput="uniform_average"))
@@ -154,8 +179,9 @@ def main() -> int:
         # Sum of all heads (attention-only residual write).
         vecs_sum = vecs.sum(axis=1, dtype=np.float32)  # (N, D)
         if tr_row.sum() >= 30 and te_row.sum() >= 10:
-            m = Ridge(alpha=args.alpha).fit(vecs_sum[tr_row], depth[tr_row])
-            r2 = float(r2_score(depth[te_row], m.predict(vecs_sum[te_row])))
+            p_sum = _fast_ridge_predict(vecs_sum[tr_row], depth[tr_row],
+                                         vecs_sum[te_row], args.alpha)
+            r2 = float(r2_score(depth[te_row], p_sum))
         else:
             r2 = float("nan")
         rows.append({"layer": int(L), "target": "depth",
@@ -198,8 +224,8 @@ def main() -> int:
             if tr_agg.sum() < 30 or te_agg.sum() < 10:
                 r2 = float("nan")
             else:
-                m = Ridge(alpha=args.alpha).fit(X[tr_agg], agg_labels[tr_agg])
-                p = m.predict(X[te_agg])
+                p = _fast_ridge_predict(X[tr_agg], agg_labels[tr_agg],
+                                        X[te_agg], args.alpha)
                 r2 = float(r2_score(agg_labels[te_agg], p, multioutput="uniform_average"))
             rows.append({"layer": int(L), "target": "cam",
                          "k": int(k), "heads_used": k_use, "r2": r2})
@@ -208,8 +234,9 @@ def main() -> int:
         X_all = agg_vecs_for_heads(list(range(vecs.shape[1])))
         X_sum = X_all.reshape(X_all.shape[0], vecs.shape[1], vecs.shape[2]).sum(axis=1)
         if tr_agg.sum() >= 30 and te_agg.sum() >= 10:
-            m = Ridge(alpha=args.alpha).fit(X_sum[tr_agg], agg_labels[tr_agg])
-            r2 = float(r2_score(agg_labels[te_agg], m.predict(X_sum[te_agg]),
+            p_cs = _fast_ridge_predict(X_sum[tr_agg], agg_labels[tr_agg],
+                                       X_sum[te_agg], args.alpha)
+            r2 = float(r2_score(agg_labels[te_agg], p_cs,
                                 multioutput="uniform_average"))
         else:
             r2 = float("nan")

@@ -76,6 +76,10 @@ class Qwen25VLWrapper:
 
         self._layer_outputs: list[Any] = []
         self._handles: list[Any] = []
+        # Per-head capture state (opt-in via enable_head_capture).
+        self._head_inputs: dict[int, Any] = {}
+        self._head_handles: list[Any] = []
+        self._head_layers: list[int] = []
         self._register_hooks()
 
     def _locate_layers(self):
@@ -112,10 +116,62 @@ class Qwen25VLWrapper:
         for i, layer in enumerate(layers):
             self._handles.append(layer.register_forward_hook(make_hook(i)))
 
+    def enable_head_capture(self, layer_ids: list[int]) -> None:
+        """Register pre-hooks on ``self_attn.o_proj`` of each given layer that
+        capture the projection's input — the concatenated multi-head output of
+        shape ``(B, T, n_heads * head_dim)``. Each forward pass populates
+        ``self._head_inputs`` as ``{layer_idx: tensor(B, T, n_heads * head_dim)}``.
+
+        Combined with ``o_proj_weight(layer_idx)``, this gives every head's
+        additive contribution to the residual stream at that layer:
+            c_h = x[:, :, h*d:(h+1)*d] @ W_O[:, h*d:(h+1)*d].T
+        summed over h plus bias equals ``o_proj(x)``.
+        """
+        self.disable_head_capture()
+        layers = self._locate_layers()
+
+        def make_pre_hook(idx: int):
+            def pre_hook(_mod, args, kwargs):
+                x = args[0] if args else kwargs.get("input")
+                if x is not None:
+                    self._head_inputs[idx] = x.detach()
+                return None
+            return pre_hook
+
+        self._head_layers = list(layer_ids)
+        for idx in layer_ids:
+            o_proj = layers[idx].self_attn.o_proj
+            self._head_handles.append(
+                o_proj.register_forward_pre_hook(make_pre_hook(idx), with_kwargs=True)
+            )
+
+    def disable_head_capture(self) -> None:
+        for h in self._head_handles:
+            h.remove()
+        self._head_handles.clear()
+        self._head_inputs.clear()
+        self._head_layers.clear()
+
+    def o_proj_weight(self, layer_idx: int):
+        """Return ``o_proj.weight`` (shape (D, n_heads * head_dim)) for the
+        given layer. Caller is responsible for slicing per-head columns.
+        """
+        layers = self._locate_layers()
+        return layers[layer_idx].self_attn.o_proj.weight
+
+    def attn_head_dims(self) -> tuple[int, int]:
+        """Return ``(n_heads, head_dim)`` for the language backbone."""
+        cfg = self.model.config
+        tc = getattr(cfg, "text_config", None) or cfg
+        n_heads = int(tc.num_attention_heads)
+        head_dim = int(getattr(tc, "head_dim", tc.hidden_size // n_heads))
+        return n_heads, head_dim
+
     def close(self) -> None:
         for h in self._handles:
             h.remove()
         self._handles.clear()
+        self.disable_head_capture()
 
     def install_intervention(
         self,
@@ -214,6 +270,7 @@ class Qwen25VLWrapper:
         ).to(self.device)
 
         self._layer_outputs.clear()
+        self._head_inputs.clear()
         with torch.no_grad():
             model_out = self.model(**proc_inputs, return_dict=True)
 
@@ -244,6 +301,10 @@ class Qwen25VLWrapper:
         extras = {"input_ids": input_ids.cpu(), "is_video": is_video}
         if getattr(model_out, "logits", None) is not None:
             extras["logits_last"] = model_out.logits[0, -1, :].detach().float().cpu().numpy()
+        if self._head_inputs:
+            # Move captured per-layer head inputs into extras; leave GPU residency
+            # as-is so callers can slice-then-project on the right device.
+            extras["head_inputs"] = dict(self._head_inputs)
         return ForwardOut(
             hidden_states=list(self._layer_outputs),
             visual_token_range=(start, end),

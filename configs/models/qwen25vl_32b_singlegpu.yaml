@@ -1,0 +1,7 @@
+name: Qwen2.5-VL-32B
+hf_id: Qwen/Qwen2.5-VL-32B-Instruct
+torch_dtype: bfloat16
+device: cuda           # single GPU (requires ~64 GiB bf16 → fits on H100 NVL 94 GB)
+patch_size: 14
+merge_size: 2
+prompt: "Describe the spatial layout of the objects in this image."

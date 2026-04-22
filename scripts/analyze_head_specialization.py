@@ -122,7 +122,7 @@ def main() -> int:
     heat = np.full((len(cols), n_heads), np.nan)
     for ti, c in enumerate(cols):
         for h in range(n_heads):
-            sub = df[df.head == h][c]
+            sub = df[df["head"] == h][c]
             if len(sub):
                 heat[ti, h] = float(sub.max())
     fig, ax = plt.subplots(figsize=(max(10, n_heads * 0.3), 5))

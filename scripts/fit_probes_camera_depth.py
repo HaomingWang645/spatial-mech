@@ -42,6 +42,7 @@ from sklearn.linear_model import Ridge
 from sklearn.metrics import r2_score
 
 from spatial_subspace.labels import camera_delta_6d, object_depth_in_camera
+from spatial_subspace.probes import fit_mlp_probe, fit_pca_linear
 from spatial_subspace.scene import Scene
 
 
@@ -162,6 +163,10 @@ def main() -> int:
     p.add_argument("--alpha", type=float, default=10.0)
     p.add_argument("--min-train", type=int, default=30)
     p.add_argument("--min-test", type=int, default=10)
+    p.add_argument("--mlp", action="store_true",
+                   help="Also fit a 2-layer MLP probe (GPU) on the same targets")
+    p.add_argument("--pca-ks", type=str, default=None,
+                   help="Comma-separated PCA dims (e.g. '2,4,8,16,32,64'); skipped if None")
     args = p.parse_args()
 
     activ = Path(args.activations)
@@ -183,6 +188,11 @@ def main() -> int:
     base_ids_all = np.array([_base_scene_id(s) for s in meta0.scene_id])
     train_base, test_base = _split(base_ids_all, args.train_frac, args.seed)
     print(f"[setup] base scenes: {len(train_base)} train / {len(test_base)} test")
+    pca_ks = [int(k) for k in args.pca_ks.split(",")] if args.pca_ks else []
+    if pca_ks:
+        print(f"[setup] PCA-k sweep: {pca_ks}")
+    if args.mlp:
+        print("[setup] MLP probe enabled (GPU if available)")
 
     results: list[dict] = []
     for layer in layers:
@@ -214,6 +224,20 @@ def main() -> int:
                 "n_train": int(tr_row.sum()),
                 "n_test": int(te_row.sum()),
             }
+            for k in pca_ks:
+                pr = fit_pca_linear(
+                    vecs[tr_row], depth[tr_row],
+                    vecs[te_row], depth[te_row],
+                    k=k, alpha=args.alpha,
+                )
+                depth_result[f"pca{k}_r2"] = float(pr.r2)
+            if args.mlp:
+                mr = fit_mlp_probe(
+                    vecs[tr_row], depth[tr_row],
+                    vecs[te_row], depth[te_row],
+                )
+                depth_result["mlp_r2"] = float(mr.r2)
+                depth_result["mlp_epochs"] = int(mr.extras.get("epochs_used", -1))
 
         # ---- Cam-delta probe (aggregated per (scene, t)) ----
         agg_X, agg_y, agg_base, agg_t = _aggregate_by_scene_t(
@@ -224,9 +248,11 @@ def main() -> int:
         te_agg = mask_agg & np.isin(agg_base, list(test_base))
         cam_result = None
         if tr_agg.sum() >= args.min_train and te_agg.sum() >= args.min_test:
-            model_c = Ridge(alpha=args.alpha).fit(agg_X[tr_agg], agg_y[tr_agg])
-            pred_c = model_c.predict(agg_X[te_agg])
-            y_te = agg_y[te_agg]
+            X_tr_c, y_tr_c = agg_X[tr_agg], agg_y[tr_agg]
+            X_te_c, y_te_c = agg_X[te_agg], agg_y[te_agg]
+            model_c = Ridge(alpha=args.alpha).fit(X_tr_c, y_tr_c)
+            pred_c = model_c.predict(X_te_c)
+            y_te = y_te_c
             err_c = y_te - pred_c  # (N, 6) signed residuals per component
             r2_per = r2_score(y_te, pred_c, multioutput="raw_values")
             comp_names = ["tx", "ty", "tz", "rx", "ry", "rz"]
@@ -258,6 +284,25 @@ def main() -> int:
                 "n_train": int(tr_agg.sum()),
                 "n_test": int(te_agg.sum()),
             }
+            for k in pca_ks:
+                pr = fit_pca_linear(X_tr_c, y_tr_c, X_te_c, y_te_c, k=k, alpha=args.alpha)
+                cam_result[f"pca{k}_r2_overall"] = float(pr.r2)
+                # Per-component PCA R² too
+                pred_pca = pr.extras["pred"]
+                r2_pca_per = r2_score(y_te_c, pred_pca, multioutput="raw_values")
+                cam_result[f"pca{k}_r2_translation"] = float(np.mean(r2_pca_per[:3]))
+                cam_result[f"pca{k}_r2_rotation"]    = float(np.mean(r2_pca_per[3:]))
+            if args.mlp:
+                mr = fit_mlp_probe(X_tr_c, y_tr_c, X_te_c, y_te_c)
+                pred_mlp = mr.extras["pred"]
+                if pred_mlp.ndim == 1:
+                    pred_mlp = pred_mlp[:, None]
+                r2_mlp_per = r2_score(y_te_c, pred_mlp, multioutput="raw_values")
+                cam_result["mlp_r2_overall"]     = float(mr.r2)
+                cam_result["mlp_r2_translation"] = float(np.mean(r2_mlp_per[:3]))
+                cam_result["mlp_r2_rotation"]    = float(np.mean(r2_mlp_per[3:]))
+                cam_result["mlp_r2_components"]  = {c: float(r2_mlp_per[i]) for i, c in enumerate(comp_names)}
+                cam_result["mlp_epochs"]         = int(mr.extras.get("epochs_used", -1))
 
         results.append({
             "layer": int(layer),
@@ -273,10 +318,24 @@ def main() -> int:
         c_ro = cam_result["r2_rotation"] if cam_result else float("nan")
         c_es_t = cam_result["error_std_translation"] if cam_result else float("nan")
         c_es_r = cam_result["error_std_rotation"] if cam_result else float("nan")
+        extras_bits = []
+        if cam_result and "mlp_r2_overall" in cam_result:
+            extras_bits.append(f"MLP={cam_result['mlp_r2_overall']:.3f}")
+        if cam_result and any(k.startswith("pca") for k in cam_result):
+            pca_keys = sorted(k for k in cam_result if k.startswith("pca") and k.endswith("_overall"))
+            if pca_keys:
+                extras_bits.append(
+                    "PCA{" + ",".join(
+                        f"{k.replace('pca','').replace('_r2_overall','')}={cam_result[k]:.2f}"
+                        for k in pca_keys
+                    ) + "}"
+                )
+        extras_str = f"  [{' '.join(extras_bits)}]" if extras_bits else ""
         print(
             f"[L{layer:02d}]  depth R²={d_r2:.3f} err µ={d_em:+.3f} σ={d_es:.3f}"
             f" (y σ={d_ts:.3f})  |  cam R²={c_r2:.3f}"
             f"  trans R²={c_tr:.3f} σ={c_es_t:.3f}  rot R²={c_ro:.3f} σ={c_es_r:.3f}"
+            f"{extras_str}"
         )
 
     (out / "camera_depth_probes.json").write_text(json.dumps(results, indent=2))

@@ -35,9 +35,107 @@ object↔position labels.
    @ L44/64 (70% depth), barely above Qwen-7B's 0.216 @ L18/28 (67% depth).
    Peak-layer depth is preserved across scale; topology strength is not.
 
-## 2. Main results
+## 2. What the four metrics mean (intuitive guide)
 
-### 2.1 Cross-model comparison (N=16 frames, all 28 decoder layers)
+Imagine a room with 6 objects on the floor. We want to test: *does the
+VLM's internal representation of each object capture where it sits in the
+room?* Each metric answers the same question in a different way, with
+increasing permissiveness.
+
+### 2.1 RSA — "does the VLM agree about distances?"
+
+Rank every pair of objects by how far apart they are in the real room
+(closest pair first). Do the same ranking using rep-space distances.
+RSA = how similar the two rankings are.
+
+- **Passing**: the VLM agrees "A and B are closer than A and C" whenever
+  that's actually true.
+- **Failing**: the VLM says "A and B are far apart" even though they're
+  right next to each other.
+
+It doesn't care whether distances are in meters, inches, or some warped
+nonlinear scale — only the **order** of distances.
+
+### 2.2 Dirichlet ratio — "do real neighbors have similar reps?"
+
+For every pair of objects that are *actually neighbors in 3D*, measure how
+different their reps are. Do the same for random pairs. Take the ratio.
+
+- **Passing**: ratio < 1 → real neighbors have more similar reps than
+  random pairs. The VLM "knows" who is next to whom.
+- **Failing**: ratio ≈ 1 → real neighbors are no more similar than
+  strangers.
+
+If two houses share a fence, do their photos look more alike than two
+houses from random cities? That's the same kind of question.
+
+### 2.3 k-NN overlap — "who are your 2 closest friends?"
+
+Pick object A. List its 2 closest objects in the actual room. Now list its
+2 closest objects according to the VLM's reps. How many overlap?
+
+- **Passing**: overlap = 1 (both lists agree on immediate neighbors).
+- **Failing**: overlap = 0 (totally different "friend groups").
+
+Most forgiving of all four metrics — it doesn't care how the VLM orders
+anyone beyond the top 2. Just "does it pick the right immediate neighbors?"
+
+### 2.4 Spectral cosine — "if we squish reps to 2D, does it look like the floor plan?"
+
+Rep space is hundreds of dimensions. Flatten it to 2D via PCA. Does the
+resulting picture look like the room's layout from above?
+
+"Spectral embedding" = the graph's own preferred 2D drawing (the shape you'd
+get if you treated adjacencies as springs and let them relax). We compare
+that natural drawing to the PCA drawing via cosine similarity.
+
+- **Passing**: the flattened rep cloud looks like the room's floor plan.
+- **Failing**: the flattened rep cloud looks like random scattered points.
+
+This is the ICLR paper's "aha" figure — when it works, you literally see
+the scene shape emerge in PCA.
+
+### 2.5 Why four metrics instead of one
+
+Each catches a different failure mode:
+
+| Pattern | Interpretation |
+|---|---|
+| k-NN passes, RSA fails | Preserves *who-is-near* but scrambles *how near* |
+| Dirichlet passes, RSA fails | Locally smooth, globally warped distances |
+| Spectral cos low, others high | Topology preserved but not in the leading linear axes |
+| All four pass | Rep space genuinely behaves like a noisy linear embedding of the 3D graph — strongest claim |
+
+Reporting all four side-by-side tells you *which kind* of topology is
+preserved, rather than compressing to one number.
+
+### 2.6 The null comparison
+
+Every metric is also computed after **randomly reshuffling which object
+sits where** (100 shuffles per scene). That "null" gives the score you'd
+get by chance. The real score being much better than the null is what lets
+us claim the signal isn't luck from a particular scene.
+
+Think of it like a crossword: solving 15 of 20 clues is only impressive if
+random guessing would get 3. The null tells us what "random guessing"
+looks like for each metric.
+
+### 2.7 Strictness hierarchy (most → least permissive)
+
+```
+k-NN overlap   ⊂   Dirichlet ratio   ⊂   RSA   ⊂   spectral cos   ⊂   Linear probe R²
+ (local nbr)      (local smoothness)   (global      (optimal-smoothness   (full affine
+                                        rank order)  linear structure)    isometry)
+```
+
+Passing a stricter metric roughly implies passing all looser ones. So if
+only k-NN overlap and Dirichlet ratio pass but RSA and spectral cos fail,
+the rep space preserves *who-is-near-who* but scrambles relative distances
+— the "nonlinear topology preserved" middle ground that linear probes miss.
+
+## 3. Main results
+
+### 3.1 Cross-model comparison (N=16 frames, all 28 decoder layers)
 
 ![Cross-model topology comparison at N=16 frames](../figures/topology_option3/compare_f16/model_compare.png)
 
@@ -57,7 +155,7 @@ Key observations:
 - On every metric, **InternVL3 > Qwen-7B > LLaVA-OV-7B** by a small but
   consistent margin.
 
-### 2.2 Frame-count sweep (all models, all N)
+### 3.2 Frame-count sweep (all models, all N)
 
 ![Frame-count sweep across 3 VLMs](../figures/topology_option3/all_models_frame_sweep/frame_sweep.png)
 
@@ -78,7 +176,7 @@ Pattern observations:
 - **LLaVA-OV-7B**: slow monotonic increase; no emergence plateau because
   it lacks the temporal merger and sees each frame independently.
 
-### 2.3 Scale × frame-count (Qwen family)
+### 3.3 Scale × frame-count (Qwen family)
 
 | Model | Frames | Layers | Best RSA | Best layer | Depth % |
 |---|---|---|---|---|---|
@@ -96,7 +194,7 @@ suggesting spatial decoding happens at a consistent architectural depth
 regardless of model size. Scale gains are real but an order of magnitude
 smaller than frame-count gains — consistent with the emergence story.
 
-### 2.4 Per-scene PCA visualisations (Fig. 9 analog)
+### 3.4 Per-scene PCA visualisations (Fig. 9 analog)
 
 Each panel set shows the ground-truth BEV layout of a scene's objects plus
 the PCA-top-2 of object reps at layers 0, 9, 18, 27. The true 3D k-NN edges
@@ -119,31 +217,31 @@ object 7 middle, objects 0/3 on left, objects 1/2 on bottom-right):
 
 ![Per-scene PCA grid, LLaVA-OV-7B f16](../figures/topology_option3/llava_ov_7b_f16/per_scene_pca_s_0077a8476e_t0.png)
 
-## 3. Per-model layer curves
+## 4. Per-model layer curves
 
-### 3.1 Qwen2.5-VL-7B, 16 frames (baseline)
+### 4.1 Qwen2.5-VL-7B, 16 frames (baseline)
 
 ![Qwen-7B f16 layer curves](../figures/topology_option3/qwen25vl_7b_f16/layer_curves.png)
 
-### 3.2 InternVL3-8B, 16 frames (strongest signal)
+### 4.2 InternVL3-8B, 16 frames (strongest signal)
 
 ![InternVL3-8B f16 layer curves](../figures/topology_option3/internvl3_8b_f16/layer_curves.png)
 
-### 3.3 LLaVA-OV-7B, 16 frames
+### 4.3 LLaVA-OV-7B, 16 frames
 
 ![LLaVA-OV-7B f16 layer curves](../figures/topology_option3/llava_ov_7b_f16/layer_curves.png)
 
-### 3.4 Qwen2.5-VL-32B, 32 frames (scale ablation, 64 layers)
+### 4.4 Qwen2.5-VL-32B, 32 frames (scale ablation, 64 layers)
 
 ![Qwen-32B f32 layer curves](../figures/topology_option3/qwen25vl_32b_f32/layer_curves.png)
 
-### 3.5 Qwen2.5-VL-7B frame-sweep, close-up
+### 4.5 Qwen2.5-VL-7B frame-sweep, close-up
 
 Shows the sharp emergence from f=8 → f=16, plateau thereafter.
 
 ![Qwen-7B frame sweep](../figures/topology_option3/qwen_frame_sweep/frame_sweep.png)
 
-### 3.6 Additional per-scene PCA examples
+### 4.6 Additional per-scene PCA examples
 
 Additional 8-object scene (`s_002abd79ae_t0`), Qwen-7B f16:
 
@@ -158,7 +256,7 @@ of object reps at 4 layers (0, 9, 18, 27), with 3D k-NN edges overlaid.
 All 12 generated PCA grids per model are under
 `figures/topology_option3/{model}/per_scene_pca_*.png`.
 
-## 3bis. Linear-representation-hypothesis decomposition
+## 5. Linear-representation-hypothesis decomposition
 
 Under the LRH, an object's rep should decompose as
 `h_obj ≈ emb(shape) + emb(color) + emb(pos) + ε`. We estimate the first two
@@ -173,7 +271,7 @@ h_pos[obj]  = h_obj - emb(color(obj)) - emb(shape(obj))
 
 We then run the identical topology battery on `h_pos`.
 
-### 3bis.1 Raw vs. residualized, all three VLMs at N=16
+### 5.1 Raw vs. residualized, all three VLMs at N=16
 
 ![Raw vs residualized, 3 VLMs stacked](../figures/topology_option3_residual/raw_vs_residualized_multi.png)
 
@@ -198,7 +296,7 @@ sees a full +0.113 RSA jump (+35% relative). Shape and color contributions
 were measurably masking the position signal in the raw reps — consistent
 with linear additive structure.
 
-### 3bis.2 Per-model close-up: InternVL3-8B
+### 5.2 Per-model close-up: InternVL3-8B
 
 The clearest case of the raw peak being "held down" by shape/color:
 
@@ -209,7 +307,7 @@ shape/color haven't been extracted yet. Divergence begins around layer 8
 as the vision tokens acquire semantic content; the residualized curve
 then stays higher through the mid-layer peak and back.
 
-### 3bis.3 Frame-count sweep, Qwen-7B: raw plateau is a residualization artifact
+### 5.3 Frame-count sweep, Qwen-7B: raw plateau is a residualization artifact
 
 When we re-run the frame sweep on residualized reps, the plateau in the raw
 frame-count analysis disappears — **RSA and k-NN overlap increase
@@ -232,7 +330,7 @@ improving but shape/color noise is growing at a similar rate. The
 residualized view removes the growing shape/color term, exposing the
 genuine monotonic emergence of the position code.
 
-### 3bis.4 Per-scene PCA after residualization
+### 5.4 Per-scene PCA after residualization
 
 Same scene as §2.4 (8 objects, Qwen-7B f16) — the residualized PCA at
 layer 18 aligns visibly better with the ground-truth BEV:
@@ -241,7 +339,7 @@ layer 18 aligns visibly better with the ground-truth BEV:
 
 Compare to the raw version in §2.4 above.
 
-### 3bis.5 Cross-model residualized comparison
+### 5.5 Cross-model residualized comparison
 
 ![Cross-model residualized at f16](../figures/topology_option3_residual/compare_f16/model_compare.png)
 
@@ -249,9 +347,9 @@ Same ranking as raw (InternVL3 > Qwen-7B > LLaVA-OV), but all three models
 show sharper, higher peaks — and InternVL3 and Qwen-7B's L18 peak is even
 more aligned after removing shape/color confounds.
 
-## 4. Interpretation
+## 6. Interpretation
 
-### 4.1 Reframing vs. linear probes
+### 6.1 Reframing vs. linear probes
 
 Earlier work reported Ridge-probe R² = 0.92 at Qwen-7B layer 12 on Tier C.
 The topology tests here — parameter-free — find a comparable peak at layer
@@ -262,7 +360,7 @@ is expected: the linear readout optimises a slightly different objective
 than topology alignment and can exploit earlier, still-entangled
 representations; topology tests "reward" only clean geometric structure.
 
-### 4.2 Comparison to Park et al. (ICLR 2025)
+### 6.2 Comparison to Park et al. (ICLR 2025)
 
 | Aspect | Park et al. 2025 | This work (Option 3) |
 |---|---|---|
@@ -274,7 +372,7 @@ representations; topology tests "reward" only clean geometric structure.
 | PCA ≈ spectral embed? | Yes (cos > 0.9, their Table 2) | Yes (cos ~0.50 — lower but significant) |
 | Critical context why? | Must infer graph from sequence stats | Visually grounded, structure already seen |
 
-### 4.3 What this says about Tier D (ARKitScenes)
+### 6.3 What this says about Tier D (ARKitScenes)
 
 The earlier linear-probe collapse on real-world Tier D video (R² ≤ 0 across
 5 models) is now testable under the nonlinear-topology hypothesis. The
@@ -283,9 +381,9 @@ the existing `data/activations/tier_d_*` extractions. If Tier D shows RSA /
 k-NN above null even when R² is zero, the negative result reframes from
 "no spatial code" to "nonlinear spatial code". Scheduled as a follow-up.
 
-## 5. Experimental details
+## 7. Experimental details
 
-### 5.1 Data
+### 7.1 Data
 
 - **Tier C free6dof rendering** at N_frames ∈ {8, 16, 32, 64}. Same 100
   base scenes × 2 trajectories for new renders (N=8, 32, 64). Existing 16
@@ -293,7 +391,7 @@ k-NN above null even when R² is zero, the negative result reframes from
 - Image size 448×448, FOV 60°. Free-6DoF trajectory with eye/target
   jitter, visibility repair.
 
-### 5.2 Extraction
+### 7.2 Extraction
 
 - `scripts/extract_activations.py --mode video`
 - 6 GPUs used in parallel (4× H100 NVL 94GB, 2× H100 PCIe 80GB). Small
@@ -303,7 +401,9 @@ k-NN above null even when R² is zero, the negative result reframes from
   token's mask coverage weights its contribution to the per-(object, frame)
   vector.
 
-### 5.3 Topology metrics (`scripts/topology_option3.py`)
+### 7.3 Topology metrics — formal definitions
+
+See §2 above for the intuitive explanation. Formal formulas, for reference:
 
 | Metric | Formula | Property |
 |---|---|---|
@@ -312,10 +412,32 @@ k-NN above null even when R² is zero, the negative result reframes from
 | k-NN overlap | `|kNN_H(i) ∩ kNN_P(i)| / k` avg over i | Local neighbourhood identity |
 | Spectral cos | `|cos(PC_k(H), z_{k+1}(L_G))|` for k=1,2 | PCA ↔ spectral embedding alignment |
 
-All computed per scene, aggregated across 200–400 scenes. Null =
-permutation of `object ↔ position` labels (200 permutations per scene).
+Dirichlet energy on the scene's k-NN graph:
+```
+E_G(H) = (1/|edges|) · Σ_{(i,j) ∈ edges(G)} ||h_i - h_j||²
+```
 
-## 6. Reproducing
+Spectral embedding of adjacency `A`:
+```
+L = D - A        (degree matrix minus adjacency = Laplacian)
+z_2, z_3 = 2nd and 3rd smallest-eigenvalue eigenvectors of L
+           (skipping the constant first eigenvector)
+```
+
+All metrics are computed per scene (n ∈ [3, 8] objects), then aggregated
+across 200–400 scenes. Null = permutation of `object ↔ position` labels
+(100 permutations per scene).
+
+**Null expectations** (mean ± std across 100 shuffles):
+
+| Metric | Null mean | Null std |
+|---|---|---|
+| RSA | 0 | ~0.3 (for n=5) |
+| Dirichlet ratio | 1.0 by construction | ~0.05 |
+| k-NN overlap | k/(n−1) ≈ 0.4 for n=5, k=2 | ~0.15 |
+| Spectral cos | ~sqrt(2/n) ≈ 0.63 for n=5 | ~0.15 |
+
+## 8. Reproducing
 
 ```bash
 # Render extra frame counts (existing 16-frame data already at data/tier_c_free6dof/)
@@ -346,7 +468,7 @@ python scripts/visualize_topology.py --out figures/topology_option3/compare_f16 
               data/probes/topology_option3/internvl3_8b_f16:InternVL3-8B
 ```
 
-## 7. Known issues / limitations
+## 9. Known issues / limitations
 
 - **InternVL3 f64 exceeds 8192-token limit.** Emits "indexing-error"
   warnings; extraction completed on 50 scenes with truncated attention.
@@ -360,7 +482,7 @@ python scripts/visualize_topology.py --out figures/topology_option3/compare_f16 
   because it spans 2 GPUs via offload. Results not yet included.
 - **No RSA/topology check yet on Tier D.** Trivially cheap follow-up.
 
-## 8. Next steps
+## 10. Next steps
 
 1. Run Option-3 topology on existing Tier D extractions (5 models, 16 frames)
    — tests the nonlinear-rescue hypothesis.

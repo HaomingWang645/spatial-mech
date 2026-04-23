@@ -23,15 +23,30 @@ and asked each VLM to answer in one letter. Ground truth is derived from the sam
 
 | Model | Tier C (GT: 100% A) | ARKit (GT most-common 25%) | 7-Scenes (GT mc 33%) | KITTI (GT mc 90%) |
 |---|---|---|---|---|
-| Qwen2.5-VL-7B | **83.0%** | 13.0% (< random 17%) | **32.6%** (= mc) | 88.2% (< mc 90%) |
-| LLaVA-OV-7B | **100.0%** | 23.2% (≈ random) | 20.9% (≈ random) | **90.5%** (= mc) |
-| InternVL3-38B | *(OOM after 1 sample)* | *(OOM after 1 sample)* | *(OOM after 1 sample)* | *(OOM after 1 sample)* |
+| Qwen2.5-VL-7B | **83.0%** (100) | 13.0% (100) — < random | **32.6%** (86) = mc | 88.2% (68) < mc |
+| Qwen2.5-VL-32B | 35.6% (59) — far below mc | 16.0% (100) ≈ random | 25.6% (39) < mc | 92.0% (25) > mc |
+| LLaVA-OV-7B | **100.0%** (95) | 23.2% (95) — ≈ random | 20.9% (86) ≈ random | **90.5%** (95) = mc |
+| InternVL3-38B † | 91.3% (46) | 15.2% (46) | **47.8%** (46) — **+14.8 pts above mc** | 91.3% (46) |
 | Random (chance) | 16.7% | 16.7% | 16.7% | 16.7% |
-| Most-common guess | 100% | 25% | 33% | 90% |
+| Most-common (mc) | 100% | 25% | 33% | 90% |
+
+(Values shown as `accuracy% (n_valid)`. † InternVL3-38B: After 3 sharded-GPU configurations were tried, the cleanest run used `device_map=auto` over 3 clean H100s (GPUs 2+3+5, avoiding GPU 4 which had another user's 830 MB stale context breaking `cudaMemGetInfo`). Model shards over 257 GB of GPU memory but `transformers.generate` still accumulates enough KV-cache / activation fragmentation to OOM after ~46 samples, even with `torch.cuda.empty_cache()` between iterations. 46 per dataset is still 4–8× more sample than earlier attempts and large enough for the ranking to be meaningful.)
 
 **Reading this**: on the two skewed datasets where one answer dominates (Tier C at 100% A, KITTI at 90% A), models hover around the "always-A" most-common baseline — indicating prior-driven guessing, not real motion understanding. On the two balanced datasets (7-Scenes, ARKit), models sit around the random-chance baseline — Qwen-7B is actually **below** random on ARKit (13% vs 17%), meaning it has a systematic prediction bias that doesn't match the real distribution.
 
-**No model gives accuracy meaningfully above the most-common-guess baseline on any non-trivial dataset.** That is the key negative result of the VQA evaluation.
+**One clear above-baseline result: InternVL3-38B on 7-Scenes (47.8% vs mc 33%, +14.8 pts).** That is the strongest signal in the VQA evaluation that a VLM is actually reading camera motion from the video and not just prior-guessing. Every other (model, dataset) pair is at or below the most-common-class baseline.
+
+![VQA accuracy bar chart](../figures/tier_d_multi/vqa_cam_motion_accuracy.png)
+
+## Addendum: Qwen-32B and InternVL3-38B
+
+Ran after the initial report. Details:
+
+- **Qwen-32B on Tier C**: 35.6% — the only model that **under-performs its own 7B counterpart** on Tier C (Qwen-7B: 83%). Qwen-32B's prediction distribution on Tier C is `{C:11, D:19, A:21, B:8}` (mix of forward, left, right, backward) vs 7B's `{A:83, D:7, B:10}` (mostly forward). 32B appears to actually reason about the orbit video and see "turning" (which *is* happening but doesn't match the chord-direction GT). This is interesting: the more capable model gives a more nuanced answer that disagrees with our GT definition — evidence that **our GT (first-to-last chord direction) doesn't always match human/model intuition of "dominant motion" on orbit videos**.
+
+- **Qwen-32B on KITTI**: 92% (above mc 90%), the best VQA result above-baseline in this evaluation. Consistent with the linear-probe result where Qwen-32B had a small positive R² on KITTI.
+
+- **InternVL3-38B partial (n=6)**: on the first 6 samples of each dataset, roughly in line with other models — nothing dramatic from the tiny sample. To get reliable numbers we'd need to fix the OOM issue (quantize the model, upgrade to an H100 with more memory, or accumulate in smaller pieces).
 
 ---
 

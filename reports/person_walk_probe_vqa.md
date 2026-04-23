@@ -19,8 +19,18 @@ On a genuinely 6-DoF random-walk through a synthetic scene (rather than the earl
 | Qwen-7B  × n64 | −0.413 | +0.232 |
 | Qwen-32B × n16 | −0.127 | +0.082 |
 | Qwen-32B × n32 | −0.140 | +0.153 |
+| Qwen-32B × n64 | −0.097 | +0.300 |
 | InternVL3-38B × n16 | +0.087 | **+0.854** |
 | InternVL3-38B × n32 | +0.047 | **+0.833** |
+| InternVL3-38B × n64 | *(extraction failed)* | *(extraction failed)* |
+
+![probe summary bar chart](../figures/pw/probe_best_r2_summary.png)
+
+**Per-layer R² curves:**
+
+![cam-motion R² by layer](../figures/pw/probe_cam_motion_by_length.png)
+
+![depth R² by layer](../figures/pw/probe_depth_by_length.png)
 
 **Headline VQA accuracy (Qwen-7B only so far)**:
 

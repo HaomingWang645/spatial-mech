@@ -23,7 +23,17 @@ All moves used `mv` (cross-partition, so it's a full copy + unlink); the source 
 | `tier_d_7scenes_llava_ov_7b/` | 528 MB | 0 d | Second round |
 | `tier_d_kitti_llava_ov_7b/` | 614 MB | 0 d | Second round |
 
-**Total moved: ~275 GB across 14 directories.**
+| `pw_n16_internvl3_38b/` | 2.2 GB | 0 d | Third round — `pw_n*` cleanup |
+| `pw_n16_qwen25vl_32b/` | 1.5 GB | 0 d | Third round |
+| `pw_n16_qwen25vl_7b/` | 445 MB | 0 d | Third round |
+| `pw_n32_internvl3_38b/` | 3.6 GB | 0 d | Third round |
+| `pw_n32_qwen25vl_32b/` | 2.4 GB | 0 d | Third round |
+| `pw_n32_qwen25vl_7b/` | 725 MB | 0 d | Third round |
+| `pw_n64_internvl3_38b/` | 4 KB (empty) | 0 d | Third round |
+| `pw_n64_qwen25vl_32b/` | 3.3 GB | 0 d | Third round |
+| `pw_n64_qwen25vl_7b/` | 1.0 GB | 0 d | Third round |
+
+**Total moved: ~290 GB across 23 directories.**
 
 ## Symlinks created
 
@@ -52,7 +62,9 @@ data/activations/tier_d_kitti_llava_ov_7b                → /mnt/data3/haoming_
 |---|---|---|
 | Before any move | **0 B free** / 100% used | 1.3 TB free / 62% used |
 | After round 1 (8 dirs, 234.7 GB) | 234 GB free / 94% used | 1.1 TB free / 69% used |
-| After round 2 (+6 llava dirs, ~40 GB) | **271 GB free / 92% used** | **1001 GB free / 71% used** |
+| After round 2 (+6 llava dirs, ~40 GB) | 271 GB free / 92% used | 1001 GB free / 71% used |
+| After deletes (SD backup + llava + 72B HF cache) | **460 GB free / 87% used** | 1001 GB free / 71% used |
+| After round 3 (+9 `pw_n*` dirs, ~15 GB) | **475 GB free / 86% used** | **987 GB free / 71% used** |
 
 ## Restoring a moved directory in place
 

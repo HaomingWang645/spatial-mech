@@ -51,6 +51,7 @@ Let $A \in \mathbb{R}^{3 \times d}$ factor as $A = \mathrm{diag}(\beta_1,
 \mathbb{R}^{3 \times d}$ has orthonormal rows ($QQ^\top = I_3$). Let
 $H = XA + E$ where the noise satisfies $\|E\|_\mathrm{op} < \tfrac{1}{2}
 \beta_3 \sigma_3(X)$. Then*
+
 $$
 \sin\Theta\bigl(\mathcal{U}_3(H),\, \mathcal{U}_3(X)\bigr)
 \;\leq\; \frac{2\,\|E\|_\mathrm{op}}{\beta_3\,\sigma_3(X)}.
@@ -58,12 +59,15 @@ $$
 
 **Theorem 1′** (axis-by-axis recovery). *Assume additionally the gap
 condition*
+
 $$
 \mathrm{gap}_k \;:=\; \min_{j \neq k} \bigl|\beta_k^2 \sigma_k(X)^2 -
 \beta_j^2 \sigma_j(X)^2\bigr| \;>\; 0 \qquad \text{for } k \in \{1,2,3\}.
 $$
+
 *Then each left singular vector $u_k(H)$ of $H$ (for $k = 1, 2, 3$)
 aligns with the corresponding left singular vector of $X$ up to*
+
 $$
 \sin\Theta\bigl(u_k(H),\, u_k(X)\bigr)
 \;\leq\; \frac{2\,\|E\|_\mathrm{op}\,\bigl(\beta_1 \sigma_1(X) + \|E\|_\mathrm{op}\bigr)}{\mathrm{gap}_k}.
@@ -88,19 +92,23 @@ $D := \mathrm{diag}(\beta_1, \beta_2, \beta_3)$.
 
 **Step 1 (column-space of the clean part).** Since $Q$ has orthonormal
 rows,
+
 $$
 XA \, (XA)^\top \;=\; X D Q Q^\top D X^\top
 \;=\; X D^2 X^\top
 \;=\; U_X \Sigma_X V_X^\top D^2 V_X \Sigma_X U_X^\top.
 $$
+
 The inner matrix $M := \Sigma_X V_X^\top D^2 V_X \Sigma_X$ is $3 \times 3$
 symmetric positive definite. Its eigenvalues are the singular values
 squared of $XA$. Since $V_X^\top D^2 V_X$ is similar to $D^2$, its
 eigenvalues lie in $[\beta_3^2, \beta_1^2]$, so
+
 $$
 \beta_3^2 \sigma_k(X)^2 \;\leq\; \sigma_k(XA)^2 \;\leq\; \beta_1^2 \sigma_k(X)^2
 \qquad k \in \{1,2,3\}.
 $$
+
 In particular $\sigma_3(XA) \geq \beta_3 \sigma_3(X)$. Crucially, the
 three left singular vectors of $XA$ span the column space of $U_X$,
 i.e. $\mathcal{U}_3(XA) = \mathcal{U}_3(X)$.
@@ -108,43 +116,52 @@ i.e. $\mathcal{U}_3(XA) = \mathcal{U}_3(X)$.
 **Step 2 (spectral gap of the noisy matrix).** By Weyl's inequality
 applied to $H = XA + E$ and using $\sigma_4(XA) = 0$ (since $XA$ has
 rank $3$):
+
 $$
 \sigma_3(H) \;\geq\; \sigma_3(XA) - \|E\|_\mathrm{op}
 \;\geq\; \beta_3 \sigma_3(X) - \tfrac{1}{2}\beta_3 \sigma_3(X)
 \;=\; \tfrac{1}{2}\beta_3 \sigma_3(X),
 $$
+
 $$
 \sigma_4(H) \;\leq\; \sigma_4(XA) + \|E\|_\mathrm{op} \;=\; \|E\|_\mathrm{op}
 \;<\; \tfrac{1}{2}\beta_3 \sigma_3(X).
 $$
+
 Hence $\sigma_3(H) > \sigma_4(H)$ strictly, so there is a non-trivial
 spectral gap between the 3-rd and 4-th singular values.
 
 **Step 3 (Davis–Kahan).** Apply the $\sin\Theta$ theorem (Davis & Kahan
 1970; see Yu, Wang, & Samworth 2015 for a clean form):
+
 $$
 \sin\Theta\bigl(\mathcal{U}_3(H), \mathcal{U}_3(XA)\bigr)
 \;\leq\; \frac{\|E\|_\mathrm{op}}{\sigma_3(XA) - \sigma_4(XA) - \|E\|_\mathrm{op}}
 \;=\; \frac{\|E\|_\mathrm{op}}{\beta_3 \sigma_3(X) - \|E\|_\mathrm{op}}.
 $$
+
 Using $\|E\|_\mathrm{op} < \tfrac{1}{2}\beta_3 \sigma_3(X)$, the
 denominator is at least $\tfrac{1}{2}\beta_3 \sigma_3(X)$, giving
+
 $$
 \sin\Theta\bigl(\mathcal{U}_3(H), \mathcal{U}_3(XA)\bigr)
 \;\leq\; \frac{2 \|E\|_\mathrm{op}}{\beta_3 \sigma_3(X)}.
 $$
+
 Combining with $\mathcal{U}_3(XA) = \mathcal{U}_3(X)$ from Step 1 yields
 Theorem 1. $\square$
 
 **Proof of Theorem 1′.** The axis-by-axis claim follows from the
 single-vector Davis–Kahan bound (Wedin's theorem) applied to each
 individual singular value. Writing
+
 $$
 \bigl| \sigma_k(H)^2 - \sigma_k(XA)^2 \bigr|
 \;\leq\; \|H^\top H - (XA)^\top (XA)\|_\mathrm{op}
 \;\leq\; 2\|XA\|_\mathrm{op}\,\|E\|_\mathrm{op} + \|E\|_\mathrm{op}^2
 \;\leq\; \|E\|_\mathrm{op}\bigl(2\beta_1 \sigma_1(X) + \|E\|_\mathrm{op}\bigr),
 $$
+
 and invoking the gap condition at index $k$ gives the stated bound. The
 argument exactly parallels Theorem 4 of Yu–Wang–Samworth. $\square$
 
@@ -180,9 +197,11 @@ C(C^\top C)^{+} C^\top$ and $\Pi_{C^\perp} := I_n - \Pi_C$ be the
 orthogonal projectors on $\mathrm{col}(C)$ and its complement. Define the
 residualized activation $\widetilde{H} := \Pi_{C^\perp} H$, and define
 residualized RSA as*
+
 $$
 \tilde\rho(H, X; C) \;:=\; \rho(\widetilde{H}, X).
 $$
+
 *Then any component of $H$ lying in $\mathrm{col}(C)$ (when viewed as a
 set of columns in $\mathbb{R}^n$) contributes zero to $\tilde\rho$.
 Equivalently, decomposing $H = \Pi_C H + \Pi_{C^\perp} H =: H_\parallel
@@ -268,6 +287,7 @@ Note $z^{(1)} = n^{-1/2} \mathbf{1}$ is constant.
 
 Define the **3D-geometry-weighted Dirichlet energy** of $H \in
 \mathbb{R}^{n \times d}$:
+
 $$
 \mathcal{E}_X(H) \;:=\; \mathrm{tr}(H^\top L H)
 \;=\; \sum_{i,j} W_{ij}\,\|h_i - h_j\|^2.
@@ -278,10 +298,12 @@ $$
 **Theorem 3.** *Fix $s \leq \min(n, d) - 1$ and constants
 $\epsilon_1 > \epsilon_2 > \cdots > \epsilon_s > 0$. Consider the
 constrained minimization*
+
 $$
 H^* \;=\; \arg\min_{H \in \mathbb{R}^{n \times d}} \mathcal{E}_X(H)
 \qquad \text{subject to} \qquad \sigma_k(H) \geq \epsilon_k \quad \forall k \in [s]. \tag{$\star$}
 $$
+
 *Then:*
 
 *(a) The left singular vectors of $H^*$ are $u_k = z^{(k)}$ for
@@ -297,10 +319,12 @@ distribution on a smooth embedded 3-manifold $\mathcal{M} \subset
 $\tau = \tau_n$ satisfying $\tau_n \to 0$ and $n \tau_n^{3+\alpha} \to
 \infty$ for some $\alpha > 0$. Then, for fixed $k$ and with probability
 tending to $1$:*
+
 $$
 z^{(k+1)}(x_i) \;\longrightarrow\; \phi^{(k)}(x_i)
 \qquad \text{uniformly on samples, as } n \to \infty,
 $$
+
 *where $\phi^{(k)}$ is the $k$-th eigenfunction of the Laplace–Beltrami
 operator on $\mathcal{M}$. In the Euclidean special case $\mathcal{M} =
 \mathbb{R}^3$, the first three non-constant eigenfunctions are the
@@ -324,11 +348,13 @@ precisely what we observe.
 $U \in \mathbb{R}^{n \times r}$, $V \in \mathbb{R}^{d \times r}$,
 $\Sigma = \mathrm{diag}(\sigma_1, \ldots, \sigma_r)$ and $r = \min(n,d)$.
 Using $V^\top V = I$ and the cyclic property of the trace:
+
 $$
 \mathcal{E}_X(H) \;=\; \mathrm{tr}(V \Sigma U^\top L U \Sigma V^\top)
 \;=\; \mathrm{tr}(\Sigma^2 U^\top L U)
 \;=\; \sum_{k=1}^r \sigma_k^2 \cdot \langle u_k, L u_k \rangle.
 $$
+
 Each $u_k$ is a unit vector, and $\{u_k\}$ are orthonormal. The constraint
 $\sigma_k(H) \geq \epsilon_k$ is decoupled in $\sigma_k$ and $u_k$, so at
 the minimum:
@@ -402,19 +428,23 @@ noise."*
 Suppose each object-token $i$ has a fixed 3D coordinate $x_i \in
 \mathbb{R}^3$ (constant across frames). At frame $t \in [T]$, the model
 produces an activation
+
 $$
 h_i^{(t)} \;=\; A^\top x_i + \xi_i^{(t)}, \qquad \xi_i^{(t)} \stackrel{iid}{\sim} \mathcal{N}(0, \nu^2 I_d),
 $$
+
 where $A \in \mathbb{R}^{3 \times d}$ is a fixed linear 3D probe
 satisfying $A A^\top = \mathrm{diag}(\beta_1^2, \beta_2^2, \beta_3^2)$
 with $\beta_1 > \beta_2 > \beta_3 > 0$, and the noise is independent
 across objects and frames. Define the frame-averaged activation matrix
 $\bar{H} \in \mathbb{R}^{n \times d}$ with rows
+
 $$
 \bar h_i \;:=\; \frac{1}{T} \sum_{t=1}^T h_i^{(t)}
 \;=\; A^\top x_i + \bar\xi_i,
 \qquad \bar\xi_i \sim \mathcal{N}(0, (\nu^2/T) I_d).
 $$
+
 So $\bar H = XA + \bar\Xi$ with $\bar\Xi$ having i.i.d.
 $\mathcal{N}(0, \nu^2/T)$ entries.
 
@@ -423,27 +453,33 @@ $\mathcal{N}(0, \nu^2/T)$ entries.
 **Theorem 4** (sample-complexity bound). *Fix $\delta \in (0, 1)$. There
 exists an absolute constant $c > 0$ such that with probability at least
 $1 - \delta$,*
+
 $$
 \sin\Theta\bigl(\mathcal{U}_3(\bar H), \mathcal{U}_3(X)\bigr)
 \;\leq\; \frac{c\,\nu}{\beta_3\,\sigma_3(X)} \cdot \sqrt{\frac{n + d + \log(1/\delta)}{T}},
 $$
+
 *provided the right-hand side is $\leq \tfrac{1}{2}$ (i.e., provided
 $T$ is large enough).*
 
 **Corollary 4.1** (emergence threshold). *To achieve
 $\sin\Theta \leq \theta$ with confidence $1 - \delta$, it suffices to
 have*
+
 $$
 T \;\geq\; T^*(\theta, \delta) \;:=\; \frac{c^2\,\nu^2\,(n + d + \log(1/\delta))}{\beta_3^2\,\sigma_3(X)^2\,\theta^2}.
 $$
+
 *In particular $T^* \propto \nu^2 / (\beta_3 \sigma_3)^2$ is the
 critical frame count.*
 
 **Corollary 4.2** (rate of RSA emergence). *Above $T^*$, the RSA
 statistic $\rho(\bar H, X)$ satisfies*
+
 $$
 \rho(\bar H, X) \;\geq\; \rho_\infty - O\Bigl(\tfrac{1}{\sqrt{T}}\Bigr),
 $$
+
 *where $\rho_\infty$ is the population RSA at $T = \infty$. Below
 $T^*$, $\rho(\bar H, X)$ is $o_p(1)$ — statistically indistinguishable
 from permutation-null.*
@@ -475,6 +511,7 @@ bound for Gaussian random matrices (Vershynin 2018, Theorem 7.3.1; or
 the non-asymptotic Bai–Yin / Silverstein bounds), there exists an
 absolute constant $c_1 > 0$ such that with probability at least
 $1 - \delta$:
+
 $$
 \|\bar\Xi\|_\mathrm{op}
 \;\leq\; c_1 \cdot \tfrac{\nu}{\sqrt{T}} \cdot \bigl(\sqrt{n} + \sqrt{d} + \sqrt{\log(1/\delta)}\bigr).
@@ -484,11 +521,13 @@ $$
 right-hand side of the claimed bound is $\leq \tfrac{1}{2}$ we have
 $\|\bar\Xi\|_\mathrm{op} \leq \tfrac{1}{2} \beta_3 \sigma_3(X)$, so
 Theorem 1 applies:
+
 $$
 \sin\Theta\bigl(\mathcal{U}_3(\bar H), \mathcal{U}_3(X)\bigr)
 \;\leq\; \frac{2\|\bar\Xi\|_\mathrm{op}}{\beta_3 \sigma_3(X)}
 \;\leq\; \frac{2 c_1 \nu}{\beta_3 \sigma_3(X) \sqrt{T}}\bigl(\sqrt{n} + \sqrt{d} + \sqrt{\log(1/\delta)}\bigr).
 $$
+
 Absorbing $2 c_1$ and the $\sqrt{\cdot}$-sum into a single constant
 $c = 2 c_1 \sqrt{3}$ (using $\sqrt{a} + \sqrt{b} + \sqrt{c} \leq
 \sqrt{3(a+b+c)}$ by Cauchy–Schwarz) gives the theorem. $\square$

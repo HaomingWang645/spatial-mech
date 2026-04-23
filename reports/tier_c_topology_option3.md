@@ -31,7 +31,7 @@ object↔position labels.
 
 ### 2.1 Cross-model comparison (N=16 frames, all 28 decoder layers)
 
-See [figures/topology_option3/compare_f16/model_compare.png](../figures/topology_option3/compare_f16/model_compare.png).
+![Cross-model topology comparison at N=16 frames](../figures/topology_option3/compare_f16/model_compare.png)
 
 | Model | Best RSA | Best layer | Best kNN | Best Dirichlet ratio | Best spectral cos |
 |---|---|---|---|---|---|
@@ -51,7 +51,7 @@ Key observations:
 
 ### 2.2 Frame-count sweep (all models, all N)
 
-See [figures/topology_option3/all_models_frame_sweep/frame_sweep.png](../figures/topology_option3/all_models_frame_sweep/frame_sweep.png).
+![Frame-count sweep across 3 VLMs](../figures/topology_option3/all_models_frame_sweep/frame_sweep.png)
 
 Best-layer RSA across frame counts:
 
@@ -90,8 +90,6 @@ smaller than frame-count gains — consistent with the emergence story.
 
 ### 2.4 Per-scene PCA visualisations (Fig. 9 analog)
 
-See [figures/topology_option3/qwen25vl_7b_f16/per_scene_pca_*.png](../figures/topology_option3/qwen25vl_7b_f16/).
-
 Each panel set shows the ground-truth BEV layout of a scene's objects plus
 the PCA-top-2 of object reps at layers 0, 9, 18, 27. The true 3D k-NN edges
 are overlaid on both panels. For 6-8 object scenes at Qwen-7B layer 18,
@@ -99,24 +97,58 @@ the PCA layout clearly mirrors the scene's planar topology: objects that
 are neighbours in 3D stay neighbours in rep space, even though global
 distances are not Euclidean-preserved.
 
-## 3. Figures
+**Scene `s_0077a8476e_t0` (8 objects, Qwen-7B f16)** — note how the overall
+topology at layer 18 preserves the relative positions (e.g., object 4 top,
+object 7 middle, objects 0/3 on left, objects 1/2 on bottom-right):
 
-### 3.1 Main figures
+![Per-scene PCA grid, Qwen-7B f16](../figures/topology_option3/qwen25vl_7b_f16/per_scene_pca_s_0077a8476e_t0.png)
 
-| File | Description |
-|---|---|
-| [compare_f16/model_compare.png](../figures/topology_option3/compare_f16/model_compare.png) | 4 metrics × layer for 3 VLMs at N=16 |
-| [all_models_frame_sweep/frame_sweep.png](../figures/topology_option3/all_models_frame_sweep/frame_sweep.png) | Best-layer metric vs. N_frames for all 3 models |
-| [qwen25vl_7b_f16/layer_curves.png](../figures/topology_option3/qwen25vl_7b_f16/layer_curves.png) | Qwen-7B f16 4-metric curves (baseline) |
-| [internvl3_8b_f16/layer_curves.png](../figures/topology_option3/internvl3_8b_f16/layer_curves.png) | InternVL3-8B f16 (strongest signal) |
-| [llava_ov_7b_f16/layer_curves.png](../figures/topology_option3/llava_ov_7b_f16/layer_curves.png) | LLaVA-OV-7B f16 |
-| [qwen25vl_32b_f8/layer_curves.png](../figures/topology_option3/qwen25vl_32b_f8/layer_curves.png) | Qwen-32B f8 (scale ablation, 64 layers) |
+**Same scene under InternVL3-8B f16**:
 
-### 3.2 Per-scene PCA examples (Fig. 9 analog)
+![Per-scene PCA grid, InternVL3-8B f16](../figures/topology_option3/internvl3_8b_f16/per_scene_pca_s_0077a8476e_t0.png)
 
-12 scenes per model, showing PCA-top-2 of object reps at layers 0, 9, 18, 27
-with ground-truth k-NN edges overlaid. Generated for every `(model, N_frames)`
-combination. Representative: [qwen25vl_7b_f16/per_scene_pca_s_0077a8476e_t0.png](../figures/topology_option3/qwen25vl_7b_f16/per_scene_pca_s_0077a8476e_t0.png).
+**Same scene under LLaVA-OV-7B f16** (peak layer differs):
+
+![Per-scene PCA grid, LLaVA-OV-7B f16](../figures/topology_option3/llava_ov_7b_f16/per_scene_pca_s_0077a8476e_t0.png)
+
+## 3. Per-model layer curves
+
+### 3.1 Qwen2.5-VL-7B, 16 frames (baseline)
+
+![Qwen-7B f16 layer curves](../figures/topology_option3/qwen25vl_7b_f16/layer_curves.png)
+
+### 3.2 InternVL3-8B, 16 frames (strongest signal)
+
+![InternVL3-8B f16 layer curves](../figures/topology_option3/internvl3_8b_f16/layer_curves.png)
+
+### 3.3 LLaVA-OV-7B, 16 frames
+
+![LLaVA-OV-7B f16 layer curves](../figures/topology_option3/llava_ov_7b_f16/layer_curves.png)
+
+### 3.4 Qwen2.5-VL-32B, 32 frames (scale ablation, 64 layers)
+
+![Qwen-32B f32 layer curves](../figures/topology_option3/qwen25vl_32b_f32/layer_curves.png)
+
+### 3.5 Qwen2.5-VL-7B frame-sweep, close-up
+
+Shows the sharp emergence from f=8 → f=16, plateau thereafter.
+
+![Qwen-7B frame sweep](../figures/topology_option3/qwen_frame_sweep/frame_sweep.png)
+
+### 3.6 Additional per-scene PCA examples
+
+Additional 8-object scene (`s_002abd79ae_t0`), Qwen-7B f16:
+
+![PCA, Qwen-7B f16, scene 002](../figures/topology_option3/qwen25vl_7b_f16/per_scene_pca_s_002abd79ae_t0.png)
+
+Same scene, InternVL3-8B f16:
+
+![PCA, InternVL3-8B f16, scene 002](../figures/topology_option3/internvl3_8b_f16/per_scene_pca_s_002abd79ae_t0.png)
+
+Each per-scene PCA grid shows the ground-truth BEV layout alongside PCA-top-2
+of object reps at 4 layers (0, 9, 18, 27), with 3D k-NN edges overlaid.
+All 12 generated PCA grids per model are under
+`figures/topology_option3/{model}/per_scene_pca_*.png`.
 
 ## 4. Interpretation
 

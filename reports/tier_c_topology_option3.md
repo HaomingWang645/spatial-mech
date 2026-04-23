@@ -15,15 +15,23 @@ object↔position labels.
    where all four topology metrics rise significantly above their
    permutation nulls. This complements — and reproduces — the earlier Ridge
    probe R² = 0.92 finding, but without fitting any parameters.
-2. **InternVL3-8B has the strongest spatial subspace** among 7-8B VLMs.
-   Best RSA 0.326 at L18/28; Qwen-7B 0.303 at L18; LLaVA-OV-7B 0.254 at L26.
-3. **Layer 18 is a consistent sweet spot** for Qwen and InternVL3; LLaVA-OV
-   peaks later (L22-26), reflecting its different fusion architecture.
-4. **Frame-count emergence is real but saturates at ~16 frames.** Qwen-7B
-   rises sharply from f8 (RSA 0.22) to f16 (RSA 0.30), then plateaus at f32
-   and f64. This is the ICLR paper's phase-transition shape with a much
-   shorter critical context for visually-grounded 3D.
-5. **Scale gives marginal gains.** Qwen-32B at N=8 frames reaches RSA 0.226
+2. **Shape + color are linearly separable from the position code.** Under
+   the Linear Representation Hypothesis we subtract `emb(shape)` and
+   `emb(color)` (empirical conditional means) from each object rep and
+   rerun the topology battery. **RSA jumps +26–35% across all three VLMs**
+   (InternVL3-8B: 0.33 → **0.44**). Confirms the additive LRH
+   decomposition holds for 3D-position reps in VLMs.
+3. **Frame-count emergence is monotonic — the raw plateau was an
+   artifact.** After residualization, Qwen-7B RSA rises monotonically with
+   N_frames (8 → 64): `0.28 → 0.38 → 0.39 → 0.42`. The raw curve's
+   "plateau" came from shape/color noise growing at the same rate as the
+   position signal; removing them reveals genuine emergence.
+4. **InternVL3-8B has the strongest spatial subspace** among 7-8B VLMs.
+   Residualized best RSA 0.439 at L18/28; Qwen-7B 0.382 at L18; LLaVA-OV-7B
+   0.321 at L21.
+5. **Layer 18 is a consistent sweet spot** for Qwen and InternVL3; LLaVA-OV
+   peaks later (L21-26), reflecting its different fusion architecture.
+6. **Scale gives marginal gains.** Qwen-32B at N=8 frames reaches RSA 0.226
    @ L44/64 (70% depth), barely above Qwen-7B's 0.216 @ L18/28 (67% depth).
    Peak-layer depth is preserved across scale; topology strength is not.
 
@@ -149,6 +157,97 @@ Each per-scene PCA grid shows the ground-truth BEV layout alongside PCA-top-2
 of object reps at 4 layers (0, 9, 18, 27), with 3D k-NN edges overlaid.
 All 12 generated PCA grids per model are under
 `figures/topology_option3/{model}/per_scene_pca_*.png`.
+
+## 3bis. Linear-representation-hypothesis decomposition
+
+Under the LRH, an object's rep should decompose as
+`h_obj ≈ emb(shape) + emb(color) + emb(pos) + ε`. We estimate the first two
+terms empirically as conditional means across all objects in the extraction,
+then subtract — leaving a position-only residual:
+
+```
+emb(color=c) = mean over {h_obj | color(obj) = c}
+emb(shape=s) = mean over {h_obj | shape(obj) = s}
+h_pos[obj]  = h_obj - emb(color(obj)) - emb(shape(obj))
+```
+
+We then run the identical topology battery on `h_pos`.
+
+### 3bis.1 Raw vs. residualized, all three VLMs at N=16
+
+![Raw vs residualized, 3 VLMs stacked](../figures/topology_option3_residual/raw_vs_residualized_multi.png)
+
+Best-layer peaks (both curves from same 400 scenes):
+
+| Model | Metric | Raw | Residualized | Δ | Rel gain |
+|---|---|---|---|---|---|
+| Qwen-7B | RSA | 0.303 @ L18 | **0.382** @ L18 | +0.079 | +26% |
+| Qwen-7B | Dirichlet ratio | 0.952 | **0.932** | −0.020 | — |
+| Qwen-7B | k-NN overlap | 0.623 | **0.668** | +0.045 | +7% |
+| Qwen-7B | spectral cos | 0.487 | **0.529** | +0.042 | +9% |
+| LLaVA-OV-7B | RSA | 0.254 @ L26 | **0.321** @ L21 | +0.067 | +26% |
+| LLaVA-OV-7B | Dirichlet ratio | 0.952 | **0.935** | −0.017 | — |
+| LLaVA-OV-7B | k-NN overlap | 0.608 @ L19 | **0.643** @ L21 | +0.035 | +6% |
+| InternVL3-8B | RSA | 0.326 @ L18 | **0.439** @ L18 | +0.113 | **+35%** |
+| InternVL3-8B | Dirichlet ratio | 0.950 | **0.913** | −0.037 | — |
+| InternVL3-8B | k-NN overlap | 0.634 @ L18 | **0.688** @ L18 | +0.054 | +9% |
+| InternVL3-8B | spectral cos | 0.504 | **0.534** | +0.030 | +6% |
+
+**All three models gain substantially after residualization.** InternVL3-8B
+sees a full +0.113 RSA jump (+35% relative). Shape and color contributions
+were measurably masking the position signal in the raw reps — consistent
+with linear additive structure.
+
+### 3bis.2 Per-model close-up: InternVL3-8B
+
+The clearest case of the raw peak being "held down" by shape/color:
+
+![InternVL3-8B raw vs residualized](../figures/topology_option3_residual/pair_internvl3_8b_f16.png)
+
+Early layers (0-5) show identical raw and residualized curves because
+shape/color haven't been extracted yet. Divergence begins around layer 8
+as the vision tokens acquire semantic content; the residualized curve
+then stays higher through the mid-layer peak and back.
+
+### 3bis.3 Frame-count sweep, Qwen-7B: raw plateau is a residualization artifact
+
+When we re-run the frame sweep on residualized reps, the plateau in the raw
+frame-count analysis disappears — **RSA and k-NN overlap increase
+monotonically with N_frames** from 8 to 64:
+
+![Qwen-7B frame sweep: raw vs residualized](../figures/topology_option3_residual/qwen_frame_sweep_compare/frame_sweep_compare.png)
+
+| N_frames | Raw best RSA | Residualized best RSA |
+|---|---|---|
+| 8 | 0.216 @ L18 | 0.278 @ L18 |
+| 16 | 0.303 @ L18 | 0.382 @ L18 |
+| 32 | 0.270 @ L18 | 0.392 @ L18 |
+| 64 | 0.272 @ L18 | **0.415** @ L18 |
+
+**Interpretation**: with more frames the model sees more viewing angles of
+the same shape/color objects, so the shape+color component of each object's
+rep becomes more dominant (averages more densely into the conditional
+means). In the raw rep this looks like a "plateau" — position info is
+improving but shape/color noise is growing at a similar rate. The
+residualized view removes the growing shape/color term, exposing the
+genuine monotonic emergence of the position code.
+
+### 3bis.4 Per-scene PCA after residualization
+
+Same scene as §2.4 (8 objects, Qwen-7B f16) — the residualized PCA at
+layer 18 aligns visibly better with the ground-truth BEV:
+
+![PCA after residualization, Qwen-7B f16](../figures/topology_option3_residual/qwen25vl_7b_f16/per_scene_pca_s_0077a8476e_t0.png)
+
+Compare to the raw version in §2.4 above.
+
+### 3bis.5 Cross-model residualized comparison
+
+![Cross-model residualized at f16](../figures/topology_option3_residual/compare_f16/model_compare.png)
+
+Same ranking as raw (InternVL3 > Qwen-7B > LLaVA-OV), but all three models
+show sharper, higher peaks — and InternVL3 and Qwen-7B's L18 peak is even
+more aligned after removing shape/color confounds.
 
 ## 4. Interpretation
 

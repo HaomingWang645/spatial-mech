@@ -19,7 +19,7 @@ We tested whether the synthetic-data result from Tier C free6dof (R² 0.31–0.5
 |---|---|---|---|---|---|
 | Qwen-7B       | +0.349 | −0.487 | −0.252 | −0.456 | large negative |
 | Qwen-32B      | +0.398 | −0.156 | +0.027 | +0.074 | small positive |
-| Qwen-72B      | +0.440 | −0.039 | *(failed to extract)* | +0.084 | small positive |
+| Qwen-72B      | +0.440 | −0.039 | +0.078 | +0.084 | small positive |
 | LLaVA-OV-7B   | +0.306 | −0.009 | +0.100 | +0.012 | weakly positive |
 | **InternVL3-38B** | **+0.575** | −0.054 | **+0.261** | **+0.219** | **robustly positive** |
 
@@ -52,7 +52,7 @@ All three real datasets use the same adapter protocol: 16 frames sampled evenly 
 |---|---|---|---|---|
 | Qwen-7B       | **+0.349** @ L11 | −0.487 @ L8  | −0.252 @ L5  | −0.456 @ L16 |
 | Qwen-32B      | **+0.398** @ L28 | −0.156 @ L0  | +0.027 @ L26 | +0.074 @ L40 |
-| Qwen-72B      | **+0.440** @ L52 | −0.039 @ L0  | *n/a*        | +0.084 @ L50 |
+| Qwen-72B      | **+0.440** @ L52 | −0.039 @ L0  | +0.078 @ L29 | +0.084 @ L50 |
 | LLaVA-OV-7B   | **+0.306** @ L15 | −0.009 @ L16 | +0.100 @ L11 | +0.012 @ L16 |
 | **InternVL3-38B** | **+0.575** @ L39 | −0.054 @ L41 | **+0.261** @ L39 | **+0.219** @ L45 |
 
@@ -87,7 +87,7 @@ Across three real datasets, InternVL3-38B has R² {−0.054, +0.261, +0.219}. AR
 Qwen 7B → 32B → 72B R² transitions:
 
 - ARKit: −0.49 → −0.16 → −0.04 (monotonic improvement with size, all still ≤ 0)
-- 7-Scenes: −0.25 → +0.03 → *n/a*
+- 7-Scenes: −0.25 → +0.03 → +0.08
 - KITTI: −0.46 → +0.07 → +0.08
 
 Scaling gets models out of the "actively miscalibrated" regime (negative R²) and into the "slightly-above-mean-predictor" regime (small positive R²) but the payoff saturates. Doubling parameters from 32B to 72B barely moves the needle on real data.

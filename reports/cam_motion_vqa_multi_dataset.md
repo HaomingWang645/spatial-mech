@@ -178,6 +178,72 @@ Our linear-probe numbers on these datasets were on the order of R² 0.05–0.26 
 
 ---
 
+## Example VQA cases (one per dataset)
+
+Each example shows 6 frames sampled evenly across the 16-frame clip, the ground-truth letter + decomposed motion metrics, and each model's predicted letter. ✓ = correct, ✗ = wrong.
+
+### Tier C free6dof — `s_0077a8476e_t3` (GT: A, moves forward)
+
+![tier_c_example](../figures/tier_d_multi/examples/Tier_C_free6dof_s_0077a8476e_t3.png)
+
+Ground truth: forward_m = +16.2, right_m = +2.8, down_m = −8.9, yaw_right_deg = −127.2 (big left turn), pitch_up_deg = +45.1. Chord-direction GT is A (forward) because the 16.2 m forward component dominates the normalised scores.
+
+| Model | Prediction | |
+|---|---|---|
+| Qwen-7B | A | ✓ |
+| Qwen-32B | D (turns right) | ✗ |
+| LLaVA-OV-7B | A | ✓ |
+| InternVL3-38B | B (backward) | ✗ |
+
+Note: Qwen-32B predicts D (right turn), which matches the fact that the camera orbits with a large negative yaw — *this is a judgment-call case* where our chord-based GT disagrees with a legitimate reading of the video as "the camera turning". See F1 and the Qwen-32B discussion below.
+
+### ARKitScenes — `41254262` (GT: B, moves backward)
+
+![arkit_example](../figures/tier_d_multi/examples/ARKitScenes_41254262.png)
+
+Ground truth: forward_m = −1.9 (stepping back), right_m = +0.5, down_m = +2.1 (camera goes lower), yaw_right_deg = −33.2, pitch_up_deg = +43.9. B wins because backward motion is the largest normalised component.
+
+| Model | Prediction | |
+|---|---|---|
+| Qwen-7B | F (tilts down) | ✗ |
+| Qwen-32B | E (tilts up) | ✗ |
+| LLaVA-OV-7B | A (moves forward) | ✗ |
+| InternVL3-38B | D (turns right) | ✗ |
+
+**All four models wrong.** Every one picks a different letter. This ARKit clip has mixed motion (backward + camera tilting up + some turn), and models latch onto whatever secondary cue is most salient to them. Illustrates why ARKit is the hardest dataset for the 6-MC format.
+
+### 7-Scenes — `office_seq-08_s0000` (GT: C, turns left)
+
+![7scenes_example](../figures/tier_d_multi/examples/7Scenes_office_seq-08_s0000.png)
+
+Ground truth: forward_m = +0.8, right_m = +0.1, down_m = +0.2, yaw_right_deg = −53.9 (turns left), pitch_up_deg = +15.2. The −53.9° yaw dominates after the 30°/m normalisation.
+
+| Model | Prediction | |
+|---|---|---|
+| Qwen-7B | D (turns right) | ✗ |
+| Qwen-32B | F (tilts down) | ✗ |
+| LLaVA-OV-7B | A (moves forward) | ✗ |
+| **InternVL3-38B** | **C** | **✓** |
+
+InternVL3-38B correctly identifies a left turn in a Kinect scan of an office while every other model misses. This is the flavour of example behind its 47.8% 7-Scenes accuracy vs 20–33% for the other models.
+
+### KITTI odometry — `kitti_01_s000600` (GT: A, moves forward)
+
+![kitti_example](../figures/tier_d_multi/examples/KITTI_odometry_kitti_01_s000600.png)
+
+Ground truth: forward_m = **+395.5 m**, right_m = −20.1, down_m = −17.7, yaw_right_deg = −5.8, pitch_up_deg = +2.2. Essentially pure forward driving for 15 seconds at ~95 km/h.
+
+| Model | Prediction | |
+|---|---|---|
+| Qwen-7B | A | ✓ |
+| Qwen-32B | A | ✓ |
+| LLaVA-OV-7B | A | ✓ |
+| InternVL3-38B | A | ✓ |
+
+All four models correct, as expected — the camera flying forward along a straight road is the easiest case and also the dominant pattern across KITTI (90% of GT = A). This is why KITTI accuracy numbers cluster tightly around the 90% most-common baseline for everyone: when the answer is this obvious and this common, the test is mostly asking "does the model default to A?"
+
+---
+
 ## Caveats
 
 1. **GT label depends on the start/end frame only.** A clip that goes forward for 7 frames and then backward for 7 ends with zero displacement and can get arbitrary labels. A richer GT would aggregate over the whole trajectory (e.g. average cam-Δ direction over all 15 consecutive-pair deltas).

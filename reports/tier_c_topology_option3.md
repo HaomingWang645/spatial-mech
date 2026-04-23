@@ -347,6 +347,50 @@ Same ranking as raw (InternVL3 > Qwen-7B > LLaVA-OV), but all three models
 show sharper, higher peaks — and InternVL3 and Qwen-7B's L18 peak is even
 more aligned after removing shape/color confounds.
 
+### 5.6 InternVL3-8B frame sweep (raw vs. residualized)
+
+Same story as Qwen-7B but even more pronounced — the raw frame-sweep was
+essentially flat while the residualized frame-sweep improves monotonically
+from f8 to f32, then drops at f64 due to the 8192-token context limit:
+
+![InternVL3-8B frame sweep raw vs residualized](../figures/topology_option3_residual/internvl3_8b_frame_sweep_compare/frame_sweep_compare.png)
+
+| N_frames | Raw best RSA | Residualized best RSA | Raw kNN | Residualized kNN |
+|---|---|---|---|---|
+| 8 | 0.272 @ L18 | 0.399 @ L18 | 0.611 @ L18 | 0.662 @ L18 |
+| 16 | 0.326 @ L18 | 0.439 @ L18 | 0.634 @ L18 | 0.688 @ L18 |
+| 32 | 0.306 @ L18 | **0.473** @ L18 | 0.633 @ L18 | 0.697 @ L18 |
+| 64 | 0.318 @ L18 | 0.380 @ L21 | 0.652 @ L18 | **0.710** @ L19 |
+
+**Two notable findings:**
+
+1. **Peak residualized RSA is at N=32 frames, not N=16** for InternVL3-8B.
+   Unlike Qwen-7B (where f16 is already near-peak), InternVL3 continues to
+   gain through f32 — its spatial code can absorb more context.
+2. **k-NN overlap keeps increasing to f64** even though RSA drops. The
+   8192-token truncation at f64 hurts **global distance rankings** (RSA) but
+   not local neighborhood identity (k-NN). Sensible: the model still sees
+   most of each object's local context even if later parts of the sequence
+   get attention-truncated.
+
+### 5.7 Detailed per-scene PCA across all layers
+
+A single 8-object scene (`s_0077a8476e_t0`) visualized at every layer for
+InternVL3-8B f16 residualized, with per-scene metrics annotated on each
+panel and per-scene layer curves at the bottom:
+
+![Detailed per-scene PCA, InternVL3-8B f16 residualized](../figures/topology_option3_residual/internvl3_8b_f16_detailed/detailed_pca_s_0077a8476e_t0.png)
+
+Note how the PCA layout gradually acquires scene structure from layers
+11–13 onwards, peaks in visual clarity around L18–19 (per-scene RSA ~0.45,
+k-NN ~0.69), then degrades in the last few layers as the residual stream
+prepares for next-token prediction.
+
+Same scene at N=32 frames (peak residualized RSA — L20 has per-scene RSA
+= 0.75, near-perfect BEV recovery):
+
+![Detailed per-scene PCA, InternVL3-8B f32 residualized](../figures/topology_option3_residual/internvl3_8b_f32_detailed/detailed_pca_s_0077a8476e_t0.png)
+
 ## 6. Interpretation
 
 ### 6.1 Reframing vs. linear probes

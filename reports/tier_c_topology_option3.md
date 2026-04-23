@@ -470,6 +470,65 @@ Stacking the 8B and 38B residualized frame sweeps:
 3. **Peak layer scales proportionally**: 8B peaks at L18/28 (64%), 38B at
    L44/63 (70%). Not identical depth but same "upper band" regime.
 
+### 5.11 Qwen-32B frame-count sweep and scale comparison
+
+We also completed the full Qwen-32B (64-layer) frame-count sweep:
+
+![Qwen-32B frame sweep raw vs residualized](../figures/topology_option3_residual/qwen32b_frame_sweep_compare/frame_sweep_compare.png)
+
+| N_frames | 32B residualized RSA | 32B peak layer | Qwen-7B residualized RSA |
+|---|---|---|---|
+| 8 | 0.276 | L46 | 0.278 @ L18 |
+| 16 | 0.373 | L44 | 0.382 @ L18 |
+| 32 | **0.420** | L43 | 0.392 @ L18 |
+| 64 | 0.421 | L43 | 0.415 @ L18 |
+
+**Same emergence shape as Qwen-7B**: sharp jump f8→f16, continued growth to
+f32, plateau by f64. Peak layer consistent at ~70% depth (L43–46 / 64).
+
+### 5.12 Qwen scale × frame-count
+
+Stacking Qwen-7B and Qwen-32B residualized frame sweeps:
+
+![Qwen scale × frame-count residualized](../figures/topology_option3_residual/qwen_scale_framesweep/scale_framesweep.png)
+
+| Frame count | 7B RSA | 32B RSA | Δ | 7B spectral cos | 32B spectral cos | Δ |
+|---|---|---|---|---|---|---|
+| 8 | 0.278 | 0.276 | −0.002 | 0.503 | 0.514 | +0.011 |
+| 16 | 0.382 | 0.373 | −0.009 | 0.529 | 0.549 | +0.020 |
+| 32 | 0.392 | **0.420** | **+0.028** | 0.554 | **0.562** | +0.008 |
+| 64 | 0.415 | 0.421 | +0.006 | 0.540 | 0.556 | +0.016 |
+
+**Two family-specific observations**:
+
+- **Qwen scale gain appears only at f32**: the 32B has +0.028 RSA over 7B
+  at N=32 frames, but is roughly tied at f8/f16/f64. This is a different
+  scaling pattern than InternVL3 (where 38B consistently slightly beats
+  8B across all frame counts).
+- **Spectral cos gain is consistent but small** (+0.01–0.02) — similar to
+  InternVL3 but much smaller in magnitude than InternVL3's +0.03–0.06.
+  Qwen's residual stream appears to allocate relatively less "clean" linear
+  capacity to position than InternVL3's does at the same scale.
+
+### 5.13 Summary table — residualized RSA across all (model, frame, scale) combos
+
+| Model | N=8 | N=16 | N=32 | N=64 |
+|---|---|---|---|---|
+| Qwen-7B | 0.278 | 0.382 | 0.392 | 0.415 |
+| Qwen-32B | 0.276 | 0.373 | **0.420** | 0.421 |
+| LLaVA-OV-7B | 0.223 | 0.321\* | 0.250\* | 0.260\* |
+| InternVL3-8B | 0.399 | 0.439 | **0.473** | 0.380† |
+| InternVL3-38B | 0.410 | 0.446 | 0.466 | — |
+
+\* LLaVA-OV values are from *raw* (not residualized) — those runs were done
+earlier; residualizing still pending for other frame counts.
+† InternVL3-8B f64 exceeds the 8192-token max pos embedding → attention
+truncated, not a clean measurement.
+
+**Best single (model, frame) combination for topology signal**:
+**InternVL3-8B at f=32 frames, RSA = 0.473** — slightly beats Qwen-32B f32
+(0.420) and InternVL3-38B f32 (0.466).
+
 ## 6. Interpretation
 
 ### 6.1 Reframing vs. linear probes

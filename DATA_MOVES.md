@@ -16,8 +16,14 @@ All moves used `mv` (cross-partition, so it's a full copy + unlink); the source 
 | `tier_c_free6dof_qwen25vl_72b/` | 39 GB | 1 day | Not touched in 24 h; full-layer activation store |
 | `tier_c_free6dof_qwen25vl_32b/` | 20 GB | 1 day | Not touched in 24 h; full-layer activation store |
 | `tier_c_free6dof_llava_ov_7b/` | 12 GB | 1 day | Not touched in 24 h; full-layer activation store |
+| `tier_c_free6dof_f32_llava_ov_7b/` | 12 GB | 0 d | Second round — llava-ov activation cleanup |
+| `tier_c_free6dof_f64_llava_ov_7b/` | 24 GB | 0 d | Second round |
+| `tier_c_free6dof_f8_llava_ov_7b/` | 3.0 GB | 0 d | Second round |
+| `tier_d_llava_ov_7b/` | 614 MB | 0 d | Second round — Tier D llava-ov |
+| `tier_d_7scenes_llava_ov_7b/` | 528 MB | 0 d | Second round |
+| `tier_d_kitti_llava_ov_7b/` | 614 MB | 0 d | Second round |
 
-**Total moved: 234.7 GB across 8 directories.**
+**Total moved: ~275 GB across 14 directories.**
 
 ## Symlinks created
 
@@ -32,14 +38,21 @@ data/activations/tier_c_free6dof_qwen25vl_32b_per_head   → /mnt/data3/haoming_
 data/activations/tier_c_free6dof_qwen25vl_72b            → /mnt/data3/haoming_x_spatial_scratch/tier_c_free6dof_qwen25vl_72b
 data/activations/tier_c_free6dof_qwen25vl_32b            → /mnt/data3/haoming_x_spatial_scratch/tier_c_free6dof_qwen25vl_32b
 data/activations/tier_c_free6dof_llava_ov_7b             → /mnt/data3/haoming_x_spatial_scratch/tier_c_free6dof_llava_ov_7b
+data/activations/tier_c_free6dof_f32_llava_ov_7b         → /mnt/data3/haoming_x_spatial_scratch/tier_c_free6dof_f32_llava_ov_7b
+data/activations/tier_c_free6dof_f64_llava_ov_7b         → /mnt/data3/haoming_x_spatial_scratch/tier_c_free6dof_f64_llava_ov_7b
+data/activations/tier_c_free6dof_f8_llava_ov_7b          → /mnt/data3/haoming_x_spatial_scratch/tier_c_free6dof_f8_llava_ov_7b
+data/activations/tier_d_llava_ov_7b                      → /mnt/data3/haoming_x_spatial_scratch/tier_d_llava_ov_7b
+data/activations/tier_d_7scenes_llava_ov_7b              → /mnt/data3/haoming_x_spatial_scratch/tier_d_7scenes_llava_ov_7b
+data/activations/tier_d_kitti_llava_ov_7b                → /mnt/data3/haoming_x_spatial_scratch/tier_d_kitti_llava_ov_7b
 ```
 
-## Disk state (before → after)
+## Disk state over time
 
 |  | `/home` (source) | `/mnt/data3` (dest) |
 |---|---|---|
-| Before | **0 B free** / 100% used | 1.3 TB free / 62% used |
-| After  | 234 GB free / 94% used | 1.1 TB free / 69% used |
+| Before any move | **0 B free** / 100% used | 1.3 TB free / 62% used |
+| After round 1 (8 dirs, 234.7 GB) | 234 GB free / 94% used | 1.1 TB free / 69% used |
+| After round 2 (+6 llava dirs, ~40 GB) | **271 GB free / 92% used** | **1001 GB free / 71% used** |
 
 ## Restoring a moved directory in place
 

@@ -1,0 +1,43 @@
+tier: C
+n_scenes: 5000
+n_frames: 16
+image_size: 448
+min_objects: 3
+max_objects: 8
+working_volume:
+  x: [-4.0, 4.0]
+  y: [-4.0, 4.0]
+floor_z: 0.0
+min_gap: 0.2
+shapes: [cube, sphere, cylinder]
+colors:
+  red:     [220, 50, 50]
+  green:   [60, 180, 75]
+  blue:    [60, 90, 220]
+  yellow:  [230, 210, 50]
+  cyan:    [70, 200, 220]
+  magenta: [200, 80, 200]
+  orange:  [240, 140, 40]
+  purple:  [130, 70, 180]
+sizes:
+  small: 0.4
+  medium: 0.6
+  large: 0.8
+background_gray: 155
+fov_degrees: 60.0
+trajectory:
+  mode: person_walk
+  # Kept so mode can be flipped back to orbit/free6dof without edits.
+  radii:      [8.0, 9.0]
+  altitudes:  [3.5, 4.5]
+  look_at_z:  0.5
+  arc_degrees: 180.0
+  person_walk:
+    eye_height:        1.5     # camera height in world units (approx person eye)
+    speed_mean:        0.5     # avg per-frame forward step (world units)
+    speed_amp:         0.25    # smooth-noise amplitude on speed
+    yaw_rate_deg:      25.0    # max yaw change per frame (degrees)
+    pitch_deg:         12.0    # max pitch magnitude
+    object_margin:     0.6     # safety distance kept from each object (m)
+    bounds_margin:     0.3     # keep this far from working_volume edges
+    max_retries:       40      # retry whole trajectory if coverage fails

@@ -444,6 +444,202 @@ def _sample_free6dof_trajectory(
     return poses
 
 
+def _sample_person_walk_trajectory(
+    scene: Scene,
+    cfg: dict[str, Any],
+    rng: random.Random,
+    traj_idx: int,
+) -> list[Pose]:
+    """Truly 6-DoF random walk of a person-like camera through the scene.
+
+    Constraints:
+      1. Camera position never goes inside an object (cylindrical collision
+         check around each object's centroid with a safety margin).
+      2. Every object is captured (centroid projects inside the image, in
+         front of the camera) in at least one frame. If the initial sample
+         fails, we retry up to ``max_retries`` times.
+      3. Not every frame contains every object — that emerges naturally
+         because the camera looks "forward" (along its walking direction)
+         instead of always at scene centre, so many frames have only a
+         subset of objects in view.
+
+    Config keys under ``trajectory.person_walk``:
+      eye_height         — fixed z coord of the camera (default 1.5 m)
+      speed_mean         — average forward speed (world units per frame)
+      speed_amp          — smooth-noise amplitude on top of speed_mean
+      yaw_rate_deg       — max per-frame yaw change
+      pitch_deg          — max pitch magnitude (looks up/down slightly)
+      object_margin      — safety margin around objects for collision (m)
+      bounds_margin      — stay this far from working_volume edges
+      max_retries        — attempts before giving up on coverage
+    """
+    n = int(cfg["n_frames"])
+    tcfg = cfg["trajectory"]
+    pcfg = tcfg.get("person_walk", {})
+
+    eye_height    = float(pcfg.get("eye_height", 1.5))
+    speed_mean    = float(pcfg.get("speed_mean", 0.5))
+    speed_amp     = float(pcfg.get("speed_amp", 0.25))
+    yaw_rate_deg  = float(pcfg.get("yaw_rate_deg", 25.0))
+    pitch_deg_amp = float(pcfg.get("pitch_deg", 12.0))
+    object_margin = float(pcfg.get("object_margin", 0.6))
+    bounds_margin = float(pcfg.get("bounds_margin", 0.3))
+    max_retries   = int(pcfg.get("max_retries", 40))
+
+    x_lo, x_hi = cfg["working_volume"]["x"]
+    y_lo, y_hi = cfg["working_volume"]["y"]
+    image_size = int(cfg["image_size"])
+    fov_deg = float(cfg.get("fov_degrees", 60.0))
+    f_px = image_size / (2.0 * math.tan(math.radians(fov_deg) / 2.0))
+    K = np.array([[f_px, 0.0, image_size / 2.0],
+                  [0.0, f_px, image_size / 2.0],
+                  [0.0, 0.0, 1.0]])
+
+    # Object collision cylinders (xy-disc of radius size + margin).
+    obj_cyls = []
+    for o in scene.objects:
+        size = float(cfg["sizes"][o.size])
+        obj_cyls.append((float(o.centroid[0]), float(o.centroid[1]), size + object_margin))
+
+    def collides(x: float, y: float) -> bool:
+        for ox, oy, r in obj_cyls:
+            if (x - ox) ** 2 + (y - oy) ** 2 < r * r:
+                return True
+        return False
+
+    def clamp_bounds(x: float, y: float) -> tuple[float, float]:
+        return (
+            max(x_lo + bounds_margin, min(x_hi - bounds_margin, x)),
+            max(y_lo + bounds_margin, min(y_hi - bounds_margin, y)),
+        )
+
+    def _poly_inframe_ratio(pts: list[tuple[float, float]]) -> float:
+        """Fraction of a 2D polygon's area that falls inside the image. 0 if
+        the polygon is entirely off-screen or too small to rasterize."""
+        if len(pts) < 3:
+            return 0.0
+        xs = [p[0] for p in pts]; ys = [p[1] for p in pts]
+        bx0, by0, bx1, by1 = min(xs), min(ys), max(xs), max(ys)
+        if bx1 <= 0 or by1 <= 0 or bx0 >= image_size or by0 >= image_size:
+            return 0.0
+        margin = 5
+        cw = int(bx1 - bx0) + 2 * margin + 1
+        ch = int(by1 - by0) + 2 * margin + 1
+        shift_x, shift_y = margin - bx0, margin - by0
+        full_im = Image.new("L", (cw, ch), 0)
+        ImageDraw.Draw(full_im).polygon(
+            [(p[0] + shift_x, p[1] + shift_y) for p in pts], fill=1
+        )
+        full_area = int(np.asarray(full_im).sum())
+        if full_area < 1:
+            return 0.0
+        view_im = Image.new("L", (image_size, image_size), 0)
+        ImageDraw.Draw(view_im).polygon(list(pts), fill=1)
+        view_area = int(np.asarray(view_im).sum())
+        return view_area / full_area
+
+    def object_inframe_ratio(eye, target, roll, obj) -> float:
+        """Fraction of ``obj``'s 2D silhouette that falls inside this frame.
+        Matches the ≥50%-in-frame criterion for coverage."""
+        R_c, t_c = look_at(eye, target, roll=roll)
+        size_world = float(cfg["sizes"][obj.size])
+        if obj.shape == "sphere":
+            proj = project(np.asarray(obj.centroid, dtype=np.float64), R_c, t_c, K)
+            if proj is None:
+                return 0.0
+            u, v, depth = proj
+            r_px = f_px * size_world / depth
+            if r_px < 1.0:
+                return 0.0
+            n = 32
+            pts = [(u + r_px * math.cos(2 * math.pi * k / n),
+                    v + r_px * math.sin(2 * math.pi * k / n)) for k in range(n)]
+            return _poly_inframe_ratio(pts)
+        samples = _object_silhouette_samples(obj, size_world)
+        proj = _project_points(samples, R_c, t_c, K)
+        if proj is None:
+            return 0.0
+        projected, _ = proj
+        hull = _convex_hull_2d(projected)
+        return _poly_inframe_ratio([(float(u), float(v)) for u, v in hull])
+
+    def frame_has_object(eye, target, roll, obj) -> bool:
+        """Back-compat name; wraps the new ≥50% inframe check."""
+        return object_inframe_ratio(eye, target, roll, obj) >= 0.5
+
+    # Scene centre (for biasing the start pose toward the object cluster).
+    obj_xy = np.array([[o.centroid[0], o.centroid[1]] for o in scene.objects])
+    scene_cx, scene_cy = float(obj_xy[:, 0].mean()), float(obj_xy[:, 1].mean())
+    # Scene radius (farthest object from centre).
+    obj_r = float(np.linalg.norm(obj_xy - np.array([scene_cx, scene_cy]), axis=1).max())
+
+    for attempt in range(max_retries):
+        # Smart start: position on the scene periphery, facing the scene centre.
+        # Bias distance so we start outside the object cluster but still inside
+        # the working volume. Per-traj offset keeps different traj_idx exploring
+        # different initial directions.
+        peripheral_angle = rng.uniform(0.0, 2.0 * math.pi)
+        peripheral_angle = (peripheral_angle + 2.0 * math.pi * (traj_idx % 4) / 4.0) % (2.0 * math.pi)
+        for _ in range(200):
+            radius = rng.uniform(obj_r + 0.5, obj_r + 1.8)
+            sx = scene_cx + radius * math.cos(peripheral_angle)
+            sy = scene_cy + radius * math.sin(peripheral_angle)
+            sx, sy = clamp_bounds(sx, sy)
+            if not collides(sx, sy):
+                break
+            peripheral_angle += rng.uniform(0.3, 0.7)
+        # Initial yaw: face scene centre with small jitter.
+        start_yaw = math.atan2(scene_cy - sy, scene_cx - sx) + rng.uniform(-math.pi / 6, math.pi / 6)
+
+        # Smooth noise tracks
+        speed_track = _smooth_noise(n, 2, speed_amp, rng).flatten() + speed_mean
+        yaw_rate_track = _smooth_noise(n, 3, yaw_rate_deg, rng).flatten()
+        pitch_track = _smooth_noise(n, 2, pitch_deg_amp, rng).flatten()
+
+        pos = np.array([sx, sy, eye_height], dtype=np.float64)
+        yaw = start_yaw
+        poses: list[Pose] = []
+        for i in range(n):
+            yaw += math.radians(yaw_rate_track[i])
+            pitch_rad = math.radians(pitch_track[i])
+            forward = np.array([
+                math.cos(yaw) * math.cos(pitch_rad),
+                math.sin(yaw) * math.cos(pitch_rad),
+                -math.sin(pitch_rad),
+            ])
+            step = speed_track[i] * forward
+            new_x = pos[0] + step[0]
+            new_y = pos[1] + step[1]
+            # Clamp + reject collisions: if we would hit an object, rotate 90°
+            new_x, new_y = clamp_bounds(new_x, new_y)
+            hits = collides(new_x, new_y)
+            if hits:
+                # Emergency-turn: sidestep at 90° from current heading
+                side_sign = 1.0 if rng.random() > 0.5 else -1.0
+                yaw += side_sign * math.pi / 2.0
+                sidef = np.array([math.cos(yaw), math.sin(yaw), 0.0])
+                new_x, new_y = clamp_bounds(pos[0] + speed_track[i] * sidef[0],
+                                            pos[1] + speed_track[i] * sidef[1])
+                if collides(new_x, new_y):
+                    # give up on moving this frame; stay in place
+                    new_x, new_y = pos[0], pos[1]
+            pos = np.array([new_x, new_y, eye_height])
+            target = pos + forward
+            poses.append((pos.copy(), target.copy(), 0.0))
+
+        # Coverage check: every object visible in at least one frame
+        missed = []
+        for o in scene.objects:
+            if not any(frame_has_object(p[0], p[1], p[2], o) for p in poses):
+                missed.append(o.object_id)
+        if not missed:
+            return poses
+        # else: retry
+
+    # Fallback: return last attempt even if coverage is incomplete
+    return poses
+
+
 def sample_trajectory(
     scene: Scene,
     cfg: dict[str, Any],
@@ -455,7 +651,9 @@ def sample_trajectory(
         return _sample_orbit_trajectory(scene, cfg, rng, traj_idx)
     if mode == "free6dof":
         return _sample_free6dof_trajectory(scene, cfg, rng, traj_idx)
-    raise ValueError(f"unknown trajectory mode: {mode!r} (expected 'orbit' or 'free6dof')")
+    if mode == "person_walk":
+        return _sample_person_walk_trajectory(scene, cfg, rng, traj_idx)
+    raise ValueError(f"unknown trajectory mode: {mode!r} (expected 'orbit', 'free6dof', or 'person_walk')")
 
 
 # ---------------------------------------------------------------------------

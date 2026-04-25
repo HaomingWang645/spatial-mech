@@ -1,6 +1,7 @@
 # Data (large files)
 data/
 *.zip
+*.safetensors
 
 # Claude Code local settings
 .claude/

@@ -111,11 +111,16 @@ def main() -> None:
             print(f"  skipped {sd.name}: {exc}")
     print(f"Built {len(examples)} examples")
 
+    # Scene-level split: shuffle scene IDs, hold out args.val_frac of scenes.
+    # This eliminates cross-QA leakage at the scene level — no scene's image
+    # appears in both train and val.
+    scenes_with_examples = sorted({ex["scene_id"] for ex in examples})
     rng = random.Random(args.seed)
-    rng.shuffle(examples)
-    n_val = max(1, int(len(examples) * args.val_frac))
-    val = examples[:n_val]
-    train = examples[n_val:]
+    rng.shuffle(scenes_with_examples)
+    n_val_scenes = max(1, int(len(scenes_with_examples) * args.val_frac))
+    val_scene_ids = set(scenes_with_examples[:n_val_scenes])
+    val = [ex for ex in examples if ex["scene_id"] in val_scene_ids]
+    train = [ex for ex in examples if ex["scene_id"] not in val_scene_ids]
 
     args.train_out.parent.mkdir(parents=True, exist_ok=True)
     args.val_out.parent.mkdir(parents=True, exist_ok=True)

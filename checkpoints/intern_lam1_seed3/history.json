@@ -1,0 +1,62 @@
+[
+  {
+    "step": 0,
+    "lm_loss": 10.3878812789917,
+    "dir_loss": 0.33869434893131256,
+    "phase": "train"
+  },
+  {
+    "step": 100,
+    "lm_loss": 0.0007706042961075354,
+    "dir_loss": 0.15428870916366577,
+    "phase": "train"
+  },
+  {
+    "step": 200,
+    "lm_loss": 0.25122678279876354,
+    "dir_loss": 0.1802613064646721,
+    "phase": "train"
+  },
+  {
+    "step": 249,
+    "phase": "eval",
+    "val_lm_loss": 0.17248868901687636,
+    "val_dirichlet_ratio": 0.10534548312425614,
+    "val_alignment_R2": 0.8898791432380676,
+    "val_n": 100,
+    "vqa_accuracy": NaN,
+    "vqa_n": 0
+  },
+  {
+    "step": 300,
+    "lm_loss": 0.11557494848966243,
+    "dir_loss": 0.13876914232969284,
+    "phase": "train"
+  },
+  {
+    "step": 400,
+    "lm_loss": 0.00024751499950070865,
+    "dir_loss": 0.08771608397364616,
+    "phase": "train"
+  },
+  {
+    "step": 499,
+    "phase": "eval",
+    "val_lm_loss": 0.10457132305826938,
+    "val_dirichlet_ratio": 0.10277323015034198,
+    "val_alignment_R2": 0.9279936850070953,
+    "val_n": 100,
+    "vqa_accuracy": NaN,
+    "vqa_n": 0
+  },
+  {
+    "step": 500,
+    "phase": "final",
+    "val_lm_loss": 0.10084465823838856,
+    "val_dirichlet_ratio": 0.10510583944392926,
+    "val_alignment_R2": 0.9214298922004122,
+    "val_n": 330,
+    "vqa_accuracy": 0.9424242424242424,
+    "vqa_n": 330
+  }
+]

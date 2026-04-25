@@ -1,0 +1,18 @@
+{
+  "model": "tier_c_free6dof_f32_internvl3_8b",
+  "peak_layer": 18,
+  "pilot1_random_dirichlet": 0.02477400191128254,
+  "pilot1_random_R2_with_Z": 0.692558765411377,
+  "pilot1_random_R2_with_X": 0.20673984289169312,
+  "pilot1_grid_dirichlet": 0.14714743196964264,
+  "pilot1_grid_R2_with_Z": 0.9999369382858276,
+  "pilot1_grid_R2_with_X": 0.9161666035652161,
+  "pilot2_layer_correlation": -0.9259626750782161,
+  "pilot3_mean_dirichlet_delta": -0.0316069129564615,
+  "pilot3_mean_alignment_delta": 0.149261740843455,
+  "pilot3_mean_delta_pct": 58.51557610829671,
+  "pilot4_mean_dirichlet_delta": 0.004185520238267296,
+  "pilot4_mean_alignment_delta": -0.07383591731389363,
+  "pilot4_mean_delta_pct": 65.31241162618001,
+  "wall_time_seconds": 123.50199484825134
+}

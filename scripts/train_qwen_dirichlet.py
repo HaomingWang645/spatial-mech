@@ -362,11 +362,11 @@ def main():
     device = torch.device("cuda:0")
 
     logger.info("Loading model: %s", args.model_id)
-    from transformers import Qwen2_5_VLForConditionalGeneration, AutoProcessor
+    from transformers import AutoModelForImageTextToText, AutoProcessor
     from peft import LoraConfig, get_peft_model
 
     processor = AutoProcessor.from_pretrained(args.model_id)
-    model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
+    model = AutoModelForImageTextToText.from_pretrained(
         args.model_id, torch_dtype=torch.bfloat16,
     ).to(device)
     # NOTE: do NOT enable gradient checkpointing -- it's incompatible with

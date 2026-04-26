@@ -16,6 +16,50 @@ so the proofs in §§3–6 can be read self-contained.
 
 ---
 
+## 0. Reading guide for ML readers
+
+This document has more matrix algebra than a typical ML paper. To make
+the math digestible without sacrificing rigor, every theorem is
+structured as a four-layer onion that you can peel as deep as you want:
+
+1. **Plain-English summary** (one paragraph) — what the theorem says
+   in everyday language and why an ML researcher should care.
+2. **Statement** — the formal claim, with all hypotheses spelled out.
+3. **Chain of reasoning (intuitive overview)** — *new in this version.*
+   Tells the proof's *story*: what's the destination, what's the
+   obstacle, what are the 2–4 key ideas that bridge them, and where
+   the "real work" happens. Read this if you want to understand
+   *why* the proof works without reading the algebra.
+4. **Step-by-step proof** — the formal derivation with every line
+   justified. Read this only if you need to verify a specific
+   inequality or want to adapt the proof to a variant.
+
+If you're building intuition: read 1 → 3 for each theorem.
+If you're writing a paper that cites these results: read 1 → 2 → 3.
+If you're refereeing or extending the proofs: read 1 → 2 → 3 → 4.
+
+The four theorems also have a logical dependency order:
+
+- **Theorem 1** (PCA recovers 3D under linear-probe assumption) is the
+  *foundation*. It's just Davis–Kahan applied to a particular
+  factorization.
+- **Theorem 2** (residualization = orthogonal projection) is *purely
+  algebraic* — a generalization of the Frisch–Waugh–Lovell theorem to
+  similarity matrices. Used to defend the residualized RSA methodology.
+- **Theorem 3** (Dirichlet-energy minimization → PCA = Laplacian
+  eigenmaps) is the *conceptual heart*. It says that the loss we
+  defined is variationally equivalent to spectral graph embedding.
+- **Theorem 4** (frame-count emergence) is *Theorem 1 applied to
+  averaged noise*. It quantifies a sample-complexity threshold and
+  predicts the empirically-observed emergence curve.
+
+Reading order to maximize understanding: 1 → 3 → 2 → 4. Theorem 1 is
+the simplest; Theorem 3 is the deepest and most ML-relevant; Theorem 2
+is an algebraic identity needed for methodology; Theorem 4 is a
+straightforward consequence of Theorem 1.
+
+---
+
 ## 1. Notation and conventions
 
 - For $A \in \mathbb{R}^{m \times n}$, $\sigma_k(A)$ is the $k$-th singular
@@ -186,11 +230,46 @@ singular vector of $H$ recovers a fixed direction in the world-coordinate
 
 ### 3.3. Proof of Theorem 1
 
-We proceed in three steps. The first establishes that the *clean* signal
-$XA$ has the same top-3 left-singular subspace as $X$ itself; the second
-shows that the noise $E$ doesn't destroy the spectral gap that separates
-"signal" from "no signal" in $H$; the third applies Davis–Kahan to convert
-the spectral gap into a subspace-rotation bound.
+#### Chain of reasoning (intuitive overview)
+
+**What we want.** Show that the top-3 PCA directions of the *noisy*
+representation $H$ point in essentially the same 3D subspace as the
+*clean* world-coordinate matrix $X$. In ML terms: even though the
+model's residual stream is $H = XA + E$ with $A$ rescaling the axes
+and $E$ adding noise, doing PCA on $H$ "rediscovers" the world-coordinate
+geometry up to small angular error.
+
+**Why this isn't trivial.** Both $A$ (the linear probe) and $E$ (the
+noise) are unknown. $A$ could rotate or rescale axes arbitrarily, and
+$E$ could in principle line up with the signal and rotate the PCs
+significantly. The proof must show that *neither* of these effects is
+enough to break recovery, given our (mild) hypotheses.
+
+**The two key ideas.**
+
+1. *The probe doesn't expand the subspace.* Multiplying $X$ by any
+   matrix $A$ on the right keeps you within $X$'s column space. So
+   $XA$ — the clean signal — has *the same* top-3 PC subspace as $X$.
+   The matrix $A$ only rotates and rescales *within* that subspace; it
+   cannot move the subspace itself. (Step 1.)
+
+2. *Spectral gap = robustness.* Once the clean signal $XA$ has a
+   non-trivial gap between its 3rd and 4th singular values (here
+   $\beta_3\sigma_3 > 0 = $ no rank-4 component), and the noise is
+   bounded ($\|E\| < \tfrac{1}{2}\beta_3\sigma_3$), then by Weyl's
+   inequality the noisy $H$ must also have a strictly positive
+   spectral gap. (Step 2.)
+
+3. *Spectral gap controls PCA stability.* Davis–Kahan is a quantitative
+   "implicit function theorem" for eigenvectors: the angle between
+   the noisy and clean top-$k$ PC subspaces is bounded by
+   noise / spectral gap. (Step 3.)
+
+The whole proof is just chaining these three pieces together. The
+"hard work" is geometric — Step 1, recognizing that $A$ doesn't break
+the subspace. Steps 2–3 are bookkeeping with standard tools.
+
+#### Step-by-step proof
 
 **Setup.** Write the SVD $X = U_X \Sigma_X V_X^\top$ with $\Sigma_X =
 \mathrm{diag}(\sigma_1, \sigma_2, \sigma_3)$ where we abbreviate $\sigma_k
@@ -475,6 +554,37 @@ $\mathbb{R}^{n(n-1)/2}$. Both versions kill linear shortcuts.*
 
 ### 4.3. Proof of Proposition 2
 
+#### Chain of reasoning (intuitive overview)
+
+**What we want.** When we "residualize" the activations $H$ against
+confounds $C$ (depth, frame index, scene ID) and then compute RSA, we
+should recover *exactly* the part of $H$ that is **orthogonal** to all
+linear combinations of $C$. So if a model's signal lives entirely in
+$\mathrm{col}(C)$ (a pure linear shortcut), residualized RSA is zero;
+if any signal is orthogonal to $\mathrm{col}(C)$, that part survives.
+
+**Why this matters in ML terms.** Reviewers always ask "are you sure
+the model isn't just using depth as a shortcut?" Theorem 2 answers it
+with a single algebraic identity: residualization is mathematically
+equivalent to running RSA on the orthogonal-to-confounds subspace, so a
+nonzero residualized RSA *certifies* signal orthogonal to depth /
+frame / scene shortcuts.
+
+**The single key idea.** Residualization is *just orthogonal
+projection*. When you regress each column of $H$ on $C$ and keep the
+residual, you get $\Pi_{C^\perp} H$ where $\Pi_{C^\perp}$ is the
+projector on the orthogonal complement of $\mathrm{col}(C)$. RSA only
+sees this projection — which by construction has zero overlap with
+$C$.
+
+**Connection to econometrics.** This is a generalization of the
+Frisch–Waugh–Lovell theorem (1933): regression coefficients are
+unchanged when you pre-residualize regressors and outcome against
+shared controls. Same trick, applied to similarity matrices instead
+of regressions.
+
+#### Step-by-step proof
+
 **Step 1 (the residualization is an orthogonal projection).**
 
 *Goal:* show that $\widetilde{H} = H_\perp$, where the latter is defined
@@ -674,6 +784,72 @@ eigenfunctions span the affine functions: $\phi^{(1)}, \phi^{(2)},
 rotation and reflection of axes).*
 
 ### 5.4. Proof of Theorem 3
+
+#### Chain of reasoning (intuitive overview)
+
+**What we want.** Show that minimizing the 3D-geometry-weighted
+Dirichlet energy over a representation matrix $H$ (with mild
+non-degeneracy constraints) forces the principal components of $H$ to
+be the *Laplacian eigenmaps* of the scene — and in the kernel limit
+(Theorem 3'), those eigenmaps converge to the world-coordinate
+functions $x, y, z$ themselves.
+
+In ML terms: if your loss says "objects close in 3D should have close
+representations," then the geometry of the representation literally
+becomes a coordinate system for 3D — for free, just from the loss.
+
+**Why this is non-trivial.** The Dirichlet loss is a *quadratic form
+in $H$*; the principal components of $H$ are the *eigenvectors of
+$H^\top H$*. These are different mathematical objects — quadratic-form
+minimization vs. eigendecomposition. Theorem 3 is the bridge: under
+appropriate constraints, optimizing the loss forces the eigenstructure
+to a specific form.
+
+**The four key ideas.**
+
+1. *Decompose along singular directions.* Use the SVD $H = U\Sigma V^\top$.
+   The Dirichlet energy $\mathrm{tr}(H^\top L H)$ rewrites as a sum
+   $\sum_k \sigma_k^2 \cdot \langle u_k, L u_k \rangle$. Each "PC
+   direction" $u_k$ contributes its own term. (Step 1.)
+
+2. *The constraints decouple.* The lower-bound constraint $\sigma_k
+   \geq \epsilon_k$ pushes each $\sigma_k$ to its lower bound (since
+   each term is $\sigma_k^2 \times$ something positive). Once the
+   $\sigma_k$ are pinned, only the $u_k$ are free. (Step 2.)
+
+3. *Ky Fan inequality picks the eigenvectors.* When you minimize a
+   weighted sum $\sum_k w_k \langle u_k, L u_k \rangle$ over orthonormal
+   $u_k$ with strictly decreasing weights $w_k$, the unique answer is
+   $u_k = z^{(k)}$ — the eigenvectors of $L$ paired with its smallest
+   $k$ eigenvalues. (Step 3.)
+
+4. *Mean-centering kills the trivial mode.* The smallest-eigenvalue
+   eigenvector of $L$ is the constant vector $\mathbf{1}$. PCA
+   automatically subtracts the mean, so this trivial mode disappears
+   and the *visible* PCs of mean-centered $H^*$ are $z^{(2)}, z^{(3)},
+   z^{(4)}, \ldots$ — the "geometry-carrying" Laplacian modes.
+   (Step 4.)
+
+**Why each idea is needed:** Step 1 turns the loss into a sum the
+constraints can act on. Step 2 strips out the singular-value
+optimization (purely numerical). Step 3 is the "core math" — Ky Fan
+is an old (1949) inequality saying weighted Rayleigh quotient is
+minimized by eigenvector matching. Step 4 is bookkeeping for the
+PCA convention.
+
+**Where the work happens:** Steps 1 and 3 carry the actual content.
+Step 1 is the SVD trick; Step 3 is the spectral-graph-theory result.
+The composition gives the theorem.
+
+**Why Theorem 3' (Belkin–Niyogi) finishes the story:** Theorem 3 says
+PCs equal Laplacian eigenmaps. But Laplacian eigenmaps of a
+*Gaussian-kernel* graph on samples from a smooth manifold converge —
+in a precise asymptotic sense — to the eigenfunctions of the
+Laplace–Beltrami operator on that manifold. For a Euclidean 3D
+domain, these are simply the coordinate functions $x, y, z$. So in the
+appropriate limit, PCs literally **are** world coordinates.
+
+#### Step-by-step proof
 
 The proof closely parallels Park et al., Theorem B.1, with the key
 modification that the Laplacian $L$ is now derived from a continuous 3D
@@ -935,6 +1111,53 @@ above the critical $T^*$, and the deviation $\rho_\infty - \rho(\bar H,
 X)$ is sub-Gaussian.*
 
 ### 6.4. Proof of Theorem 4
+
+#### Chain of reasoning (intuitive overview)
+
+**What we want.** Show that as you give the model more frames to average
+over, the recovered 3D subspace converges to the true one at rate
+$1/\sqrt{T}$. There's a critical threshold $T^*$ below which recovery
+is essentially random (frame averaging hasn't denoised enough), and
+above which recovery is provably accurate.
+
+In ML terms: if you train with single frames you'd need a *huge* probe
+SNR to recover 3D structure; but with many frames the noise averages
+out, and you can succeed even with a much weaker probe.
+
+**Why this isn't trivial.** The bound has to:
+(a) Quantify how Gaussian noise concentrates after averaging.
+(b) Apply Theorem 1's geometric bound to the *averaged* noise.
+(c) Handle the (small) probability of bad noise realizations.
+
+**The single key idea.** Frame averaging is *identical* to dividing
+the per-frame noise by $\sqrt{T}$. So if Theorem 1 needs noise
+$\|E\|_\mathrm{op} < \tfrac{1}{2}\beta_3\sigma_3$ to give a clean
+recovery bound, frame averaging gives us this for free as soon as
+$T$ is large enough — specifically, as soon as
+$\nu/\sqrt{T} < \tfrac{1}{2}\beta_3\sigma_3 / (\sqrt{n} + \sqrt{d})$.
+
+**Step-by-step strategy.**
+
+1. *Concentration.* The averaged noise $\bar\Xi$ is a Gaussian random
+   matrix with variance $\nu^2/T$ per entry. Lemma B5 gives a sharp
+   probabilistic bound on its operator norm, so we can say "with
+   probability $1-\delta$, $\|\bar\Xi\|_\mathrm{op}$ is at most this
+   small thing."
+
+2. *Plug into Theorem 1.* Once $\|\bar\Xi\|_\mathrm{op}$ is bounded,
+   Theorem 1's $\sin\Theta$ bound applies directly. We just substitute.
+
+3. *Solve for $T$.* Setting the right-hand side equal to a target
+   recovery angle $\theta$ and solving for $T$ gives the critical
+   sample-complexity bound $T^* \propto \nu^2 / (\beta_3\sigma_3 \cdot
+   \theta)^2$.
+
+The proof has *no new geometric content*; it's a composition of
+Theorem 1 with a standard probabilistic bound. The "value" of the
+theorem is in turning Theorem 1 into a quantitative *frame-count*
+prediction that you can directly check empirically (see report §5).
+
+#### Step-by-step proof
 
 The proof reduces to applying Theorem 1 with the "noise" matrix being
 $\bar\Xi$, and bounding $\|\bar\Xi\|_\mathrm{op}$ via Lemma B5.

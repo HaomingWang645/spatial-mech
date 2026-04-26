@@ -142,7 +142,7 @@ x-spatial-manual/
     └── dirichlet_train_results.png                  ← LoRA sweep summary across (model, λ, seed)
 ```
 
-`*.safetensors` is gitignored, so under `checkpoints/<run>/lora/` only `adapter_config.json` and `README.md` get tracked — `adapter_model.safetensors` (the LoRA weights themselves) does not. Per-run `train.log` and `history.json` are fair game for git if you want to commit a sweep's metadata.
+`checkpoints/` is gitignored in its entirety — no LoRA weights, training logs, or per-run history files are tracked. If you want to commit a sweep summary to the repo, drop the aggregated artifact into [reports/](reports/) instead (e.g. [reports/dirichlet_train_results.png](reports/dirichlet_train_results.png)).
 
 ---
 

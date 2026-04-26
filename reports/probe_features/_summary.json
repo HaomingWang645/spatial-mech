@@ -1,0 +1,50 @@
+{
+  "intern_lam0_seed0": {
+    "n_samples": 201,
+    "color_probe_acc": 0.9694235588972433,
+    "color_std": 0.04164927935406715,
+    "shape_probe_acc": 1.0,
+    "shape_std": 0.0,
+    "pos_r2_scene_rel": -0.07526282072067261,
+    "rsa_within_scene": -0.005705952163026734,
+    "n_colors": 8,
+    "n_shapes": 3,
+    "n_scenes": 33
+  },
+  "intern_lam1_seed0": {
+    "n_samples": 201,
+    "color_probe_acc": 0.7744911058133137,
+    "color_std": 0.06218291361657112,
+    "shape_probe_acc": 1.0,
+    "shape_std": 0.0,
+    "pos_r2_scene_rel": -1.0111351013183594,
+    "rsa_within_scene": 0.6156071766758181,
+    "n_colors": 8,
+    "n_shapes": 3,
+    "n_scenes": 33
+  },
+  "qwen_lam0_seed0": {
+    "n_samples": 201,
+    "color_probe_acc": 0.9894736842105264,
+    "color_std": 0.02105263157894739,
+    "shape_probe_acc": 1.0,
+    "shape_std": 0.0,
+    "pos_r2_scene_rel": -0.08961039781570435,
+    "rsa_within_scene": 0.039328291832087796,
+    "n_colors": 8,
+    "n_shapes": 3,
+    "n_scenes": 33
+  },
+  "qwen_lam1_seed0": {
+    "n_samples": 201,
+    "color_probe_acc": 0.9456140350877194,
+    "color_std": 0.041414855199760646,
+    "shape_probe_acc": 1.0,
+    "shape_std": 0.0,
+    "pos_r2_scene_rel": -0.7301107168197631,
+    "rsa_within_scene": 0.6181768421678333,
+    "n_colors": 8,
+    "n_shapes": 3,
+    "n_scenes": 33
+  }
+}

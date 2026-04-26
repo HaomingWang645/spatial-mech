@@ -1,0 +1,279 @@
+{
+  "summary": {
+    "checkpoint": "base",
+    "model_id": "Qwen/Qwen2.5-VL-7B-Instruct",
+    "scenes_root": "data/tier_d",
+    "n_total": 40,
+    "n_correct": 7,
+    "accuracy": 0.175,
+    "by_motion": {
+      "F": {
+        "n": 5,
+        "acc": 0.0
+      },
+      "A": {
+        "n": 4,
+        "acc": 0.5
+      },
+      "D": {
+        "n": 9,
+        "acc": 0.0
+      },
+      "C": {
+        "n": 11,
+        "acc": 0.0
+      },
+      "E": {
+        "n": 9,
+        "acc": 0.5555555555555556
+      },
+      "B": {
+        "n": 2,
+        "acc": 0.0
+      }
+    },
+    "wall_time_s": 30.66462469100952
+  },
+  "rows": [
+    {
+      "scene_id": "41069021",
+      "gt": "F",
+      "pred": "A",
+      "correct": false
+    },
+    {
+      "scene_id": "41069025",
+      "gt": "A",
+      "pred": "E",
+      "correct": false
+    },
+    {
+      "scene_id": "41069042",
+      "gt": "D",
+      "pred": "A",
+      "correct": false
+    },
+    {
+      "scene_id": "41069043",
+      "gt": "C",
+      "pred": "A",
+      "correct": false
+    },
+    {
+      "scene_id": "41069046",
+      "gt": "C",
+      "pred": "A",
+      "correct": false
+    },
+    {
+      "scene_id": "41069048",
+      "gt": "C",
+      "pred": "A",
+      "correct": false
+    },
+    {
+      "scene_id": "41069050",
+      "gt": "F",
+      "pred": "A",
+      "correct": false
+    },
+    {
+      "scene_id": "41069051",
+      "gt": "F",
+      "pred": "A",
+      "correct": false
+    },
+    {
+      "scene_id": "41125696",
+      "gt": "C",
+      "pred": "E",
+      "correct": false
+    },
+    {
+      "scene_id": "41125700",
+      "gt": "E",
+      "pred": "E",
+      "correct": true
+    },
+    {
+      "scene_id": "41125709",
+      "gt": "D",
+      "pred": "A",
+      "correct": false
+    },
+    {
+      "scene_id": "41125718",
+      "gt": "E",
+      "pred": "E",
+      "correct": true
+    },
+    {
+      "scene_id": "41125722",
+      "gt": "E",
+      "pred": "C",
+      "correct": false
+    },
+    {
+      "scene_id": "41125731",
+      "gt": "D",
+      "pred": "E",
+      "correct": false
+    },
+    {
+      "scene_id": "41125756",
+      "gt": "C",
+      "pred": "A",
+      "correct": false
+    },
+    {
+      "scene_id": "41125760",
+      "gt": "D",
+      "pred": "A",
+      "correct": false
+    },
+    {
+      "scene_id": "41125763",
+      "gt": "C",
+      "pred": "A",
+      "correct": false
+    },
+    {
+      "scene_id": "41142278",
+      "gt": "D",
+      "pred": "A",
+      "correct": false
+    },
+    {
+      "scene_id": "41142280",
+      "gt": "E",
+      "pred": "A",
+      "correct": false
+    },
+    {
+      "scene_id": "41142281",
+      "gt": "D",
+      "pred": "A",
+      "correct": false
+    },
+    {
+      "scene_id": "41159503",
+      "gt": "E",
+      "pred": "E",
+      "correct": true
+    },
+    {
+      "scene_id": "41159504",
+      "gt": "A",
+      "pred": "A",
+      "correct": true
+    },
+    {
+      "scene_id": "41159508",
+      "gt": "B",
+      "pred": "A",
+      "correct": false
+    },
+    {
+      "scene_id": "41159519",
+      "gt": "A",
+      "pred": "A",
+      "correct": true
+    },
+    {
+      "scene_id": "41159525",
+      "gt": "E",
+      "pred": "A",
+      "correct": false
+    },
+    {
+      "scene_id": "41159529",
+      "gt": "C",
+      "pred": "E",
+      "correct": false
+    },
+    {
+      "scene_id": "41159530",
+      "gt": "E",
+      "pred": "E",
+      "correct": true
+    },
+    {
+      "scene_id": "41159534",
+      "gt": "D",
+      "pred": "A",
+      "correct": false
+    },
+    {
+      "scene_id": "41159538",
+      "gt": "B",
+      "pred": "A",
+      "correct": false
+    },
+    {
+      "scene_id": "41159540",
+      "gt": "F",
+      "pred": "A",
+      "correct": false
+    },
+    {
+      "scene_id": "41159541",
+      "gt": "C",
+      "pred": "D",
+      "correct": false
+    },
+    {
+      "scene_id": "41159553",
+      "gt": "C",
+      "pred": "A",
+      "correct": false
+    },
+    {
+      "scene_id": "41159555",
+      "gt": "C",
+      "pred": "A",
+      "correct": false
+    },
+    {
+      "scene_id": "41159557",
+      "gt": "A",
+      "pred": "E",
+      "correct": false
+    },
+    {
+      "scene_id": "41159558",
+      "gt": "D",
+      "pred": "A",
+      "correct": false
+    },
+    {
+      "scene_id": "41159566",
+      "gt": "E",
+      "pred": "A",
+      "correct": false
+    },
+    {
+      "scene_id": "41159571",
+      "gt": "D",
+      "pred": "E",
+      "correct": false
+    },
+    {
+      "scene_id": "41159572",
+      "gt": "C",
+      "pred": "E",
+      "correct": false
+    },
+    {
+      "scene_id": "41254246",
+      "gt": "F",
+      "pred": "E",
+      "correct": false
+    },
+    {
+      "scene_id": "41254262",
+      "gt": "E",
+      "pred": "E",
+      "correct": true
+    }
+  ]
+}

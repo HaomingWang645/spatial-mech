@@ -1,0 +1,267 @@
+{
+  "summary": {
+    "checkpoint": "base",
+    "model_id": "Qwen/Qwen2.5-VL-7B-Instruct",
+    "scenes_root": "data/tier_d_kitti",
+    "n_total": 40,
+    "n_correct": 36,
+    "accuracy": 0.9,
+    "by_motion": {
+      "A": {
+        "n": 36,
+        "acc": 1.0
+      },
+      "C": {
+        "n": 1,
+        "acc": 0.0
+      },
+      "B": {
+        "n": 3,
+        "acc": 0.0
+      }
+    },
+    "wall_time_s": 182.91987085342407
+  },
+  "rows": [
+    {
+      "scene_id": "kitti_00_s000300",
+      "gt": "A",
+      "pred": "A",
+      "correct": true
+    },
+    {
+      "scene_id": "kitti_00_s000450",
+      "gt": "A",
+      "pred": "A",
+      "correct": true
+    },
+    {
+      "scene_id": "kitti_00_s000600",
+      "gt": "A",
+      "pred": "A",
+      "correct": true
+    },
+    {
+      "scene_id": "kitti_00_s000750",
+      "gt": "A",
+      "pred": "A",
+      "correct": true
+    },
+    {
+      "scene_id": "kitti_00_s000900",
+      "gt": "A",
+      "pred": "A",
+      "correct": true
+    },
+    {
+      "scene_id": "kitti_00_s001200",
+      "gt": "A",
+      "pred": "A",
+      "correct": true
+    },
+    {
+      "scene_id": "kitti_00_s001350",
+      "gt": "A",
+      "pred": "A",
+      "correct": true
+    },
+    {
+      "scene_id": "kitti_00_s001800",
+      "gt": "A",
+      "pred": "A",
+      "correct": true
+    },
+    {
+      "scene_id": "kitti_00_s001950",
+      "gt": "A",
+      "pred": "A",
+      "correct": true
+    },
+    {
+      "scene_id": "kitti_00_s002100",
+      "gt": "A",
+      "pred": "A",
+      "correct": true
+    },
+    {
+      "scene_id": "kitti_00_s002250",
+      "gt": "A",
+      "pred": "A",
+      "correct": true
+    },
+    {
+      "scene_id": "kitti_00_s002400",
+      "gt": "A",
+      "pred": "A",
+      "correct": true
+    },
+    {
+      "scene_id": "kitti_00_s002550",
+      "gt": "A",
+      "pred": "A",
+      "correct": true
+    },
+    {
+      "scene_id": "kitti_00_s002850",
+      "gt": "A",
+      "pred": "A",
+      "correct": true
+    },
+    {
+      "scene_id": "kitti_00_s003000",
+      "gt": "A",
+      "pred": "A",
+      "correct": true
+    },
+    {
+      "scene_id": "kitti_00_s003150",
+      "gt": "A",
+      "pred": "A",
+      "correct": true
+    },
+    {
+      "scene_id": "kitti_00_s003300",
+      "gt": "A",
+      "pred": "A",
+      "correct": true
+    },
+    {
+      "scene_id": "kitti_00_s003450",
+      "gt": "A",
+      "pred": "A",
+      "correct": true
+    },
+    {
+      "scene_id": "kitti_00_s004050",
+      "gt": "A",
+      "pred": "A",
+      "correct": true
+    },
+    {
+      "scene_id": "kitti_00_s004200",
+      "gt": "A",
+      "pred": "A",
+      "correct": true
+    },
+    {
+      "scene_id": "kitti_00_s004350",
+      "gt": "C",
+      "pred": "A",
+      "correct": false
+    },
+    {
+      "scene_id": "kitti_01_s000000",
+      "gt": "B",
+      "pred": "A",
+      "correct": false
+    },
+    {
+      "scene_id": "kitti_01_s000150",
+      "gt": "A",
+      "pred": "A",
+      "correct": true
+    },
+    {
+      "scene_id": "kitti_01_s000300",
+      "gt": "A",
+      "pred": "A",
+      "correct": true
+    },
+    {
+      "scene_id": "kitti_01_s000600",
+      "gt": "A",
+      "pred": "A",
+      "correct": true
+    },
+    {
+      "scene_id": "kitti_01_s000900",
+      "gt": "B",
+      "pred": "A",
+      "correct": false
+    },
+    {
+      "scene_id": "kitti_02_s000150",
+      "gt": "A",
+      "pred": "A",
+      "correct": true
+    },
+    {
+      "scene_id": "kitti_02_s000300",
+      "gt": "A",
+      "pred": "A",
+      "correct": true
+    },
+    {
+      "scene_id": "kitti_02_s000600",
+      "gt": "A",
+      "pred": "A",
+      "correct": true
+    },
+    {
+      "scene_id": "kitti_02_s000750",
+      "gt": "A",
+      "pred": "A",
+      "correct": true
+    },
+    {
+      "scene_id": "kitti_02_s000900",
+      "gt": "A",
+      "pred": "A",
+      "correct": true
+    },
+    {
+      "scene_id": "kitti_02_s001050",
+      "gt": "A",
+      "pred": "A",
+      "correct": true
+    },
+    {
+      "scene_id": "kitti_02_s001350",
+      "gt": "A",
+      "pred": "A",
+      "correct": true
+    },
+    {
+      "scene_id": "kitti_02_s001500",
+      "gt": "A",
+      "pred": "A",
+      "correct": true
+    },
+    {
+      "scene_id": "kitti_02_s001650",
+      "gt": "A",
+      "pred": "A",
+      "correct": true
+    },
+    {
+      "scene_id": "kitti_02_s001800",
+      "gt": "A",
+      "pred": "A",
+      "correct": true
+    },
+    {
+      "scene_id": "kitti_02_s001950",
+      "gt": "A",
+      "pred": "A",
+      "correct": true
+    },
+    {
+      "scene_id": "kitti_02_s002250",
+      "gt": "A",
+      "pred": "A",
+      "correct": true
+    },
+    {
+      "scene_id": "kitti_02_s002400",
+      "gt": "A",
+      "pred": "A",
+      "correct": true
+    },
+    {
+      "scene_id": "kitti_02_s002550",
+      "gt": "B",
+      "pred": "A",
+      "correct": false
+    }
+  ]
+}

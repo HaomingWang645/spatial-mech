@@ -1,7 +1,12 @@
 # Data (large files)
 data/
+checkpoints/
 *.zip
 *.safetensors
+*.npz
+
+# Per-seed result files (sweep outputs)
+*_seed*.json
 
 # Claude Code local settings
 .claude/

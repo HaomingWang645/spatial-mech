@@ -1,0 +1,61 @@
+{
+  "summary": {
+    "checkpoint": "base",
+    "model_id": "Qwen/Qwen2.5-VL-7B-Instruct",
+    "scenes_root": "data/tier_d_7scenes",
+    "n_total": 5,
+    "n_correct": 1,
+    "accuracy": 0.2,
+    "by_motion": {
+      "C": {
+        "n": 2,
+        "acc": 0.0
+      },
+      "D": {
+        "n": 1,
+        "acc": 0.0
+      },
+      "A": {
+        "n": 1,
+        "acc": 1.0
+      },
+      "F": {
+        "n": 1,
+        "acc": 0.0
+      }
+    },
+    "wall_time_s": 27.668336629867554
+  },
+  "rows": [
+    {
+      "scene_id": "chess_seq-01_s0000",
+      "gt": "C",
+      "pred": "A",
+      "correct": false
+    },
+    {
+      "scene_id": "chess_seq-01_s0450",
+      "gt": "D",
+      "pred": "A",
+      "correct": false
+    },
+    {
+      "scene_id": "chess_seq-02_s0000",
+      "gt": "C",
+      "pred": "A",
+      "correct": false
+    },
+    {
+      "scene_id": "chess_seq-02_s0450",
+      "gt": "A",
+      "pred": "A",
+      "correct": true
+    },
+    {
+      "scene_id": "chess_seq-03_s0000",
+      "gt": "F",
+      "pred": "A",
+      "correct": false
+    }
+  ]
+}

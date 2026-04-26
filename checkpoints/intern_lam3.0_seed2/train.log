@@ -1,0 +1,63 @@
+2026-04-25 20:59:19,080 [INFO] Loading model: OpenGVLab/InternVL3-8B-hf
+2026-04-25 20:59:22,101 [INFO] HTTP Request: HEAD https://huggingface.co/OpenGVLab/InternVL3-8B-hf/resolve/main/processor_config.json "HTTP/1.1 307 Temporary Redirect"
+2026-04-25 20:59:22,113 [INFO] HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/OpenGVLab/InternVL3-8B-hf/259a3b64a14623c0ec91a045cb43f7c5af5fa6af/processor_config.json "HTTP/1.1 200 OK"
+2026-04-25 20:59:22,140 [INFO] HTTP Request: GET https://huggingface.co/api/models/OpenGVLab/InternVL3-8B-hf/tree/main/additional_chat_templates?recursive=false&expand=false "HTTP/1.1 404 Not Found"
+2026-04-25 20:59:22,165 [INFO] HTTP Request: HEAD https://huggingface.co/OpenGVLab/InternVL3-8B-hf/resolve/main/processor_config.json "HTTP/1.1 307 Temporary Redirect"
+2026-04-25 20:59:22,166 [WARNING] Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+2026-04-25 20:59:22,178 [INFO] HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/OpenGVLab/InternVL3-8B-hf/259a3b64a14623c0ec91a045cb43f7c5af5fa6af/processor_config.json "HTTP/1.1 200 OK"
+2026-04-25 20:59:22,219 [INFO] HTTP Request: HEAD https://huggingface.co/OpenGVLab/InternVL3-8B-hf/resolve/main/chat_template.json "HTTP/1.1 404 Not Found"
+2026-04-25 20:59:22,242 [INFO] HTTP Request: HEAD https://huggingface.co/OpenGVLab/InternVL3-8B-hf/resolve/main/chat_template.jinja "HTTP/1.1 307 Temporary Redirect"
+2026-04-25 20:59:22,254 [INFO] HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/OpenGVLab/InternVL3-8B-hf/259a3b64a14623c0ec91a045cb43f7c5af5fa6af/chat_template.jinja "HTTP/1.1 200 OK"
+2026-04-25 20:59:22,278 [INFO] HTTP Request: HEAD https://huggingface.co/OpenGVLab/InternVL3-8B-hf/resolve/main/audio_tokenizer_config.json "HTTP/1.1 404 Not Found"
+2026-04-25 20:59:22,305 [INFO] HTTP Request: GET https://huggingface.co/api/models/OpenGVLab/InternVL3-8B-hf/tree/main/additional_chat_templates?recursive=false&expand=false "HTTP/1.1 404 Not Found"
+2026-04-25 20:59:22,327 [INFO] HTTP Request: HEAD https://huggingface.co/OpenGVLab/InternVL3-8B-hf/resolve/main/processor_config.json "HTTP/1.1 307 Temporary Redirect"
+2026-04-25 20:59:22,339 [INFO] HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/OpenGVLab/InternVL3-8B-hf/259a3b64a14623c0ec91a045cb43f7c5af5fa6af/processor_config.json "HTTP/1.1 200 OK"
+2026-04-25 20:59:22,361 [INFO] HTTP Request: HEAD https://huggingface.co/OpenGVLab/InternVL3-8B-hf/resolve/main/chat_template.json "HTTP/1.1 404 Not Found"
+2026-04-25 20:59:22,386 [INFO] HTTP Request: HEAD https://huggingface.co/OpenGVLab/InternVL3-8B-hf/resolve/main/chat_template.jinja "HTTP/1.1 307 Temporary Redirect"
+2026-04-25 20:59:22,399 [INFO] HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/OpenGVLab/InternVL3-8B-hf/259a3b64a14623c0ec91a045cb43f7c5af5fa6af/chat_template.jinja "HTTP/1.1 200 OK"
+2026-04-25 20:59:22,432 [INFO] HTTP Request: HEAD https://huggingface.co/OpenGVLab/InternVL3-8B-hf/resolve/main/audio_tokenizer_config.json "HTTP/1.1 404 Not Found"
+2026-04-25 20:59:22,455 [INFO] HTTP Request: HEAD https://huggingface.co/OpenGVLab/InternVL3-8B-hf/resolve/main/processor_config.json "HTTP/1.1 307 Temporary Redirect"
+2026-04-25 20:59:22,468 [INFO] HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/OpenGVLab/InternVL3-8B-hf/259a3b64a14623c0ec91a045cb43f7c5af5fa6af/processor_config.json "HTTP/1.1 200 OK"
+2026-04-25 20:59:22,490 [INFO] HTTP Request: HEAD https://huggingface.co/OpenGVLab/InternVL3-8B-hf/resolve/main/preprocessor_config.json "HTTP/1.1 307 Temporary Redirect"
+2026-04-25 20:59:22,502 [INFO] HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/OpenGVLab/InternVL3-8B-hf/259a3b64a14623c0ec91a045cb43f7c5af5fa6af/preprocessor_config.json "HTTP/1.1 200 OK"
+2026-04-25 20:59:22,546 [INFO] HTTP Request: HEAD https://huggingface.co/OpenGVLab/InternVL3-8B-hf/resolve/main/processor_config.json "HTTP/1.1 307 Temporary Redirect"
+2026-04-25 20:59:22,558 [INFO] HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/OpenGVLab/InternVL3-8B-hf/259a3b64a14623c0ec91a045cb43f7c5af5fa6af/processor_config.json "HTTP/1.1 200 OK"
+2026-04-25 20:59:22,582 [INFO] HTTP Request: HEAD https://huggingface.co/OpenGVLab/InternVL3-8B-hf/resolve/main/preprocessor_config.json "HTTP/1.1 307 Temporary Redirect"
+2026-04-25 20:59:22,595 [INFO] HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/OpenGVLab/InternVL3-8B-hf/259a3b64a14623c0ec91a045cb43f7c5af5fa6af/preprocessor_config.json "HTTP/1.1 200 OK"
+2026-04-25 20:59:22,619 [INFO] HTTP Request: HEAD https://huggingface.co/OpenGVLab/InternVL3-8B-hf/resolve/main/config.json "HTTP/1.1 307 Temporary Redirect"
+2026-04-25 20:59:22,631 [INFO] HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/OpenGVLab/InternVL3-8B-hf/259a3b64a14623c0ec91a045cb43f7c5af5fa6af/config.json "HTTP/1.1 200 OK"
+2026-04-25 20:59:22,659 [INFO] HTTP Request: HEAD https://huggingface.co/OpenGVLab/InternVL3-8B-hf/resolve/main/tokenizer_config.json "HTTP/1.1 307 Temporary Redirect"
+2026-04-25 20:59:22,671 [INFO] HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/OpenGVLab/InternVL3-8B-hf/259a3b64a14623c0ec91a045cb43f7c5af5fa6af/tokenizer_config.json "HTTP/1.1 200 OK"
+2026-04-25 20:59:22,697 [INFO] HTTP Request: GET https://huggingface.co/api/models/OpenGVLab/InternVL3-8B-hf/tree/main/additional_chat_templates?recursive=false&expand=false "HTTP/1.1 404 Not Found"
+2026-04-25 20:59:22,725 [INFO] HTTP Request: GET https://huggingface.co/api/models/OpenGVLab/InternVL3-8B-hf/tree/main?recursive=true&expand=false "HTTP/1.1 200 OK"
+2026-04-25 20:59:23,497 [INFO] HTTP Request: GET https://huggingface.co/api/models/OpenGVLab/InternVL3-8B-hf "HTTP/1.1 200 OK"
+2026-04-25 20:59:23,520 [INFO] HTTP Request: HEAD https://huggingface.co/OpenGVLab/InternVL3-8B-hf/resolve/main/processor_config.json "HTTP/1.1 307 Temporary Redirect"
+2026-04-25 20:59:23,532 [INFO] HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/OpenGVLab/InternVL3-8B-hf/259a3b64a14623c0ec91a045cb43f7c5af5fa6af/processor_config.json "HTTP/1.1 200 OK"
+2026-04-25 20:59:23,557 [INFO] HTTP Request: HEAD https://huggingface.co/OpenGVLab/InternVL3-8B-hf/resolve/main/video_preprocessor_config.json "HTTP/1.1 404 Not Found"
+2026-04-25 20:59:23,579 [INFO] HTTP Request: HEAD https://huggingface.co/OpenGVLab/InternVL3-8B-hf/resolve/main/preprocessor_config.json "HTTP/1.1 307 Temporary Redirect"
+2026-04-25 20:59:23,591 [INFO] HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/OpenGVLab/InternVL3-8B-hf/259a3b64a14623c0ec91a045cb43f7c5af5fa6af/preprocessor_config.json "HTTP/1.1 200 OK"
+2026-04-25 20:59:23,614 [INFO] HTTP Request: HEAD https://huggingface.co/OpenGVLab/InternVL3-8B-hf/resolve/main/config.json "HTTP/1.1 307 Temporary Redirect"
+2026-04-25 20:59:23,627 [INFO] HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/OpenGVLab/InternVL3-8B-hf/259a3b64a14623c0ec91a045cb43f7c5af5fa6af/config.json "HTTP/1.1 200 OK"
+2026-04-25 20:59:23,667 [INFO] HTTP Request: HEAD https://huggingface.co/OpenGVLab/InternVL3-8B-hf/resolve/main/processor_config.json "HTTP/1.1 307 Temporary Redirect"
+2026-04-25 20:59:23,678 [INFO] HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/OpenGVLab/InternVL3-8B-hf/259a3b64a14623c0ec91a045cb43f7c5af5fa6af/processor_config.json "HTTP/1.1 200 OK"
+2026-04-25 20:59:23,700 [INFO] HTTP Request: HEAD https://huggingface.co/OpenGVLab/InternVL3-8B-hf/resolve/main/video_preprocessor_config.json "HTTP/1.1 404 Not Found"
+2026-04-25 20:59:23,722 [INFO] HTTP Request: HEAD https://huggingface.co/OpenGVLab/InternVL3-8B-hf/resolve/main/preprocessor_config.json "HTTP/1.1 307 Temporary Redirect"
+2026-04-25 20:59:23,734 [INFO] HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/OpenGVLab/InternVL3-8B-hf/259a3b64a14623c0ec91a045cb43f7c5af5fa6af/preprocessor_config.json "HTTP/1.1 200 OK"
+2026-04-25 20:59:24,277 [INFO] HTTP Request: HEAD https://huggingface.co/OpenGVLab/InternVL3-8B-hf/resolve/main/config.json "HTTP/1.1 307 Temporary Redirect"
+2026-04-25 20:59:24,290 [INFO] HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/OpenGVLab/InternVL3-8B-hf/259a3b64a14623c0ec91a045cb43f7c5af5fa6af/config.json "HTTP/1.1 200 OK"
+2026-04-25 20:59:24,330 [INFO] HTTP Request: HEAD https://huggingface.co/OpenGVLab/InternVL3-8B-hf/resolve/main/config.json "HTTP/1.1 307 Temporary Redirect"
+2026-04-25 20:59:24,342 [INFO] HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/OpenGVLab/InternVL3-8B-hf/259a3b64a14623c0ec91a045cb43f7c5af5fa6af/config.json "HTTP/1.1 200 OK"
+2026-04-25 20:59:24,622 [INFO] HTTP Request: HEAD https://huggingface.co/OpenGVLab/InternVL3-8B-hf/resolve/main/generation_config.json "HTTP/1.1 307 Temporary Redirect"
+2026-04-25 20:59:24,635 [INFO] HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/OpenGVLab/InternVL3-8B-hf/259a3b64a14623c0ec91a045cb43f7c5af5fa6af/generation_config.json "HTTP/1.1 200 OK"
+2026-04-25 20:59:31,052 [INFO] Train: 2990  Val: 330
+2026-04-25 20:59:32,408 [INFO] step   0/500  lm=9.7098  dir=0.1863  total=10.2685  (1.3s/1=1.35s/step)
+2026-04-25 21:00:03,008 [INFO] step 100/500  lm=1.2086  dir=0.2097  total=1.8378  (31.9s/101=0.32s/step)
+2026-04-25 21:00:34,173 [INFO] step 200/500  lm=0.0000  dir=0.0924  total=0.2772  (63.1s/201=0.31s/step)
+2026-04-25 21:00:57,131 [INFO]   [eval @ step 249] lm=0.0875  dir=0.1100  R²=0.9178  (n=100)
+2026-04-25 21:01:11,876 [INFO] step 300/500  lm=0.0000  dir=0.0978  total=0.2935  (100.8s/301=0.33s/step)
+2026-04-25 21:01:42,258 [INFO] step 400/500  lm=0.0004  dir=0.1273  total=0.3823  (131.2s/401=0.33s/step)
+2026-04-25 21:02:21,922 [INFO]   [eval @ step 499] lm=0.0655  dir=0.0972  R²=0.9008  (n=100)
+2026-04-25 21:03:06,804 [INFO] FINAL  lm=0.0633  dir=0.1042  R²=0.9140  vqa_acc=0.9515 (n=330)
+2026-04-25 21:03:06,892 [INFO] HTTP Request: HEAD https://huggingface.co/OpenGVLab/InternVL3-8B-hf/resolve/main/config.json "HTTP/1.1 307 Temporary Redirect"
+2026-04-25 21:03:06,905 [INFO] HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/OpenGVLab/InternVL3-8B-hf/259a3b64a14623c0ec91a045cb43f7c5af5fa6af/config.json "HTTP/1.1 200 OK"
+2026-04-25 21:03:07,009 [INFO] Saved to checkpoints/intern_lam3.0_seed2

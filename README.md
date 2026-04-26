@@ -2,6 +2,22 @@
 
 Probing the 3D **spatial subspace** of video VLMs — does the model build an internal geometric representation of a scene that mirrors its true 3D layout, and does it actually *use* that representation when answering questions?
 
+## Summary
+
+*Does a video VLM internally represent the 3D layout of the scene it's shown?* This repo answers **yes**, with four results and one intervention:
+
+- **Top-3 PCA of object-token activations recovers world coordinates** up to an affine transform (linear-probe R² ≈ 0.92 at the peak layer).
+- **The subspace migrates deeper as views get harder** — input layer for a single top-down BEV image, mid-stack (L18) for fragmented BEV video, mid-stack (L12) for perspective ego-video.
+- **Within a video, the subspace builds up across temporal tokens** — at every layer, R² climbs monotonically with the temporal-token index (cross-temporal attention assembling a global scene).
+- **The code is camera-frame, not world-frame** — a probe trained on one trajectory of a scene goes to R² ≈ −0.36 on a sibling trajectory; de-rotation through depth is partial and never finishes.
+- **Forward-pre-hook activation steering** along the probe direction *causally* shifts the model's verbal answer to a spatial comparison question — the subspace is read by the language head, not just an epiphenomenal correlate.
+
+On top of probing, the code implements a **Dirichlet-energy auxiliary loss** ([§10](#10-dirichlet-loss-training--q4)) that LoRA-finetunes a VLM to make this subspace stronger. Full theoretical backing — four theorems covering PCA-3D recovery, residualization-as-projection, the Dirichlet ↔ PCA equivalence behind the auxiliary loss, and a √T frame-count emergence bound — is in [reports/theory_draft.md](reports/theory_draft.md).
+
+Tested model family: Qwen2.5-VL {7B, 32B, 72B}; the extraction pipeline is model-agnostic.
+
+## Contents
+
 This repository is the implementation and experimental record for the plan in [`VLM_3D_Spatial_Subspace_Experiment_Plan_1.pdf`](VLM_3D_Spatial_Subspace_Experiment_Plan_1.pdf). It contains:
 
 1. A tiered synthetic-scene generator (single BEV → fragmented BEV video → perspective ego-video, sharing one canonical 3D ground truth across tiers).

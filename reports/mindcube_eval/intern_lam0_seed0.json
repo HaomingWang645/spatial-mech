@@ -1,0 +1,1340 @@
+{
+  "summary": {
+    "checkpoint": "checkpoints/intern_lam0_seed0/lora",
+    "model_id": "OpenGVLab/InternVL3-8B-hf",
+    "n_total": 100,
+    "n_correct": 37,
+    "accuracy": 0.37,
+    "by_primary_category": {
+      "perpendicular": {
+        "n": 100,
+        "acc": 0.37
+      }
+    },
+    "by_type": {
+      "1_frame": {
+        "n": 30,
+        "acc": 0.4
+      },
+      "0_frame": {
+        "n": 15,
+        "acc": 0.2
+      },
+      "2_frame": {
+        "n": 21,
+        "acc": 0.2857142857142857
+      },
+      "3_frame": {
+        "n": 27,
+        "acc": 0.48148148148148145
+      },
+      "general": {
+        "n": 7,
+        "acc": 0.42857142857142855
+      }
+    },
+    "wall_time_s": 112.26278471946716
+  },
+  "rows": [
+    {
+      "id": "among_group693_q1_5_2",
+      "gt": "C",
+      "pred": "C",
+      "correct": true,
+      "type": "1_frame",
+      "category": [
+        "perpendicular",
+        "O-O",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group458_q0_2_3",
+      "gt": "A",
+      "pred": "A",
+      "correct": true,
+      "type": "0_frame",
+      "category": [
+        "perpendicular",
+        "P-O",
+        "sequence",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group603_q1_1_2",
+      "gt": "B",
+      "pred": "B",
+      "correct": true,
+      "type": "1_frame",
+      "category": [
+        "perpendicular",
+        "P-P",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group603_q1_2_2",
+      "gt": "B",
+      "pred": "B",
+      "correct": true,
+      "type": "1_frame",
+      "category": [
+        "perpendicular",
+        "P-O",
+        "sequence",
+        "self"
+      ]
+    },
+    {
+      "id": "among_35122ec333dc84cf223ea366c3ad968dfece8ca02e57a8c241819837583f76f0_q2_2_1",
+      "gt": "C",
+      "pred": "C",
+      "correct": true,
+      "type": "2_frame",
+      "category": [
+        "perpendicular",
+        "P-O",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group693_q1_1_2",
+      "gt": "D",
+      "pred": "B",
+      "correct": false,
+      "type": "1_frame",
+      "category": [
+        "perpendicular",
+        "P-P",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group676_q2_2_3",
+      "gt": "A",
+      "pred": "A",
+      "correct": true,
+      "type": "2_frame",
+      "category": [
+        "perpendicular",
+        "P-O",
+        "sequence",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group279_q1_2_3",
+      "gt": "B",
+      "pred": "B",
+      "correct": true,
+      "type": "1_frame",
+      "category": [
+        "perpendicular",
+        "P-O",
+        "sequence",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group738_q2_2_1",
+      "gt": "B",
+      "pred": "B",
+      "correct": true,
+      "type": "2_frame",
+      "category": [
+        "perpendicular",
+        "P-O",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_78d7c094e9caf11f01b33337cc3697724731f15c54e516153694faa0f8101a7e_q1_2_1",
+      "gt": "D",
+      "pred": "B",
+      "correct": false,
+      "type": "1_frame",
+      "category": [
+        "perpendicular",
+        "P-O",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group030_q3_2_2",
+      "gt": "B",
+      "pred": "B",
+      "correct": true,
+      "type": "3_frame",
+      "category": [
+        "perpendicular",
+        "P-O",
+        "sequence",
+        "self"
+      ]
+    },
+    {
+      "id": "among_64418bebcb207a6b7936f799eb25ff417cf51625880d81c1117d30ed773be215_q3_1_1",
+      "gt": "A",
+      "pred": "B",
+      "correct": false,
+      "type": "3_frame",
+      "category": [
+        "perpendicular",
+        "P-P",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group413_q1_1_1",
+      "gt": "A",
+      "pred": "C",
+      "correct": false,
+      "type": "1_frame",
+      "category": [
+        "perpendicular",
+        "P-P",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group603_q3_5_1",
+      "gt": "B",
+      "pred": "D",
+      "correct": false,
+      "type": "3_frame",
+      "category": [
+        "perpendicular",
+        "O-O",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group706_gen_4_1",
+      "gt": "C",
+      "pred": "C",
+      "correct": true,
+      "type": "general",
+      "category": [
+        "perpendicular",
+        "PO",
+        "meanwhile",
+        "level2"
+      ]
+    },
+    {
+      "id": "among_group693_gen_6_2",
+      "gt": "B",
+      "pred": "A",
+      "correct": false,
+      "type": "general",
+      "category": [
+        "perpendicular",
+        "OO",
+        "meanwhile",
+        "level2"
+      ]
+    },
+    {
+      "id": "among_group319_q1_2_1",
+      "gt": "B",
+      "pred": "A",
+      "correct": false,
+      "type": "1_frame",
+      "category": [
+        "perpendicular",
+        "P-O",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_9bf509056d90440300efa33d614564feb1ae17672e2dd1fb722aef2ddc534318_q1_5_1",
+      "gt": "C",
+      "pred": "C",
+      "correct": true,
+      "type": "1_frame",
+      "category": [
+        "perpendicular",
+        "O-O",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group525_q1_2_1",
+      "gt": "D",
+      "pred": "B",
+      "correct": false,
+      "type": "1_frame",
+      "category": [
+        "perpendicular",
+        "P-O",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group512_q3_2_2",
+      "gt": "B",
+      "pred": "B",
+      "correct": true,
+      "type": "3_frame",
+      "category": [
+        "perpendicular",
+        "P-O",
+        "sequence",
+        "self"
+      ]
+    },
+    {
+      "id": "among_26da8aea7dc318bbeddc6d935b28352f67b12915ec4ff634e04c31495e656449_q3_1_1",
+      "gt": "A",
+      "pred": "B",
+      "correct": false,
+      "type": "3_frame",
+      "category": [
+        "perpendicular",
+        "P-P",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group582_q0_2_3",
+      "gt": "B",
+      "pred": "A",
+      "correct": false,
+      "type": "0_frame",
+      "category": [
+        "perpendicular",
+        "P-O",
+        "sequence",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group693_q3_5_2",
+      "gt": "A",
+      "pred": "D",
+      "correct": false,
+      "type": "3_frame",
+      "category": [
+        "perpendicular",
+        "O-O",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group665_q1_2_1",
+      "gt": "C",
+      "pred": "B",
+      "correct": false,
+      "type": "1_frame",
+      "category": [
+        "perpendicular",
+        "P-O",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group041_q0_1_1",
+      "gt": "D",
+      "pred": "C",
+      "correct": false,
+      "type": "0_frame",
+      "category": [
+        "perpendicular",
+        "P-P",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group319_q2_5_2",
+      "gt": "B",
+      "pred": "A",
+      "correct": false,
+      "type": "2_frame",
+      "category": [
+        "perpendicular",
+        "O-O",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_78d7c094e9caf11f01b33337cc3697724731f15c54e516153694faa0f8101a7e_q2_5_1",
+      "gt": "D",
+      "pred": "A",
+      "correct": false,
+      "type": "2_frame",
+      "category": [
+        "perpendicular",
+        "O-O",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group113_q2_1_1",
+      "gt": "B",
+      "pred": "C",
+      "correct": false,
+      "type": "2_frame",
+      "category": [
+        "perpendicular",
+        "P-P",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group676_q3_5_2",
+      "gt": "A",
+      "pred": "D",
+      "correct": false,
+      "type": "3_frame",
+      "category": [
+        "perpendicular",
+        "O-O",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_26da8aea7dc318bbeddc6d935b28352f67b12915ec4ff634e04c31495e656449_q1_5_2",
+      "gt": "A",
+      "pred": "A",
+      "correct": true,
+      "type": "1_frame",
+      "category": [
+        "perpendicular",
+        "O-O",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group534_q1_1_2",
+      "gt": "C",
+      "pred": "B",
+      "correct": false,
+      "type": "1_frame",
+      "category": [
+        "perpendicular",
+        "P-P",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group008_q2_5_2",
+      "gt": "D",
+      "pred": "B",
+      "correct": false,
+      "type": "2_frame",
+      "category": [
+        "perpendicular",
+        "O-O",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group413_q2_5_1",
+      "gt": "A",
+      "pred": "D",
+      "correct": false,
+      "type": "2_frame",
+      "category": [
+        "perpendicular",
+        "O-O",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_15131f022f3c6bac68f29de62891226d69b905809770dffe1efb69a327f3f9f7_q3_2_1",
+      "gt": "B",
+      "pred": "B",
+      "correct": true,
+      "type": "3_frame",
+      "category": [
+        "perpendicular",
+        "P-O",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group525_q2_1_1",
+      "gt": "D",
+      "pred": "A",
+      "correct": false,
+      "type": "2_frame",
+      "category": [
+        "perpendicular",
+        "P-P",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_78d7c094e9caf11f01b33337cc3697724731f15c54e516153694faa0f8101a7e_q0_5_1",
+      "gt": "D",
+      "pred": "A",
+      "correct": false,
+      "type": "0_frame",
+      "category": [
+        "perpendicular",
+        "O-O",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_07a60a723ebf3a478a81f413345b5d6da80aebd75c67e5e4e40836c09831b338_q3_2_2",
+      "gt": "A",
+      "pred": "A",
+      "correct": true,
+      "type": "3_frame",
+      "category": [
+        "perpendicular",
+        "P-O",
+        "sequence",
+        "self"
+      ]
+    },
+    {
+      "id": "among_78d7c094e9caf11f01b33337cc3697724731f15c54e516153694faa0f8101a7e_q3_1_2",
+      "gt": "B",
+      "pred": "B",
+      "correct": true,
+      "type": "3_frame",
+      "category": [
+        "perpendicular",
+        "P-P",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_011ee9e638b75b983746252c02622e56d5477cbc8f1ae7e1a27410cbce89b282_q3_2_3",
+      "gt": "A",
+      "pred": "A",
+      "correct": true,
+      "type": "3_frame",
+      "category": [
+        "perpendicular",
+        "P-O",
+        "sequence",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group131_q2_5_1",
+      "gt": "A",
+      "pred": "C",
+      "correct": false,
+      "type": "2_frame",
+      "category": [
+        "perpendicular",
+        "O-O",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group706_q2_2_1",
+      "gt": "D",
+      "pred": "B",
+      "correct": false,
+      "type": "2_frame",
+      "category": [
+        "perpendicular",
+        "P-O",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_7ae6ffaa7d3a703ce4e8dbe7c189f147024d3ca344f00ff3f8fe1587d617d117_q3_1_2",
+      "gt": "B",
+      "pred": "B",
+      "correct": true,
+      "type": "3_frame",
+      "category": [
+        "perpendicular",
+        "P-P",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group525_q2_2_2",
+      "gt": "A",
+      "pred": "A",
+      "correct": true,
+      "type": "2_frame",
+      "category": [
+        "perpendicular",
+        "P-O",
+        "sequence",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group007_q3_5_1",
+      "gt": "D",
+      "pred": "A",
+      "correct": false,
+      "type": "3_frame",
+      "category": [
+        "perpendicular",
+        "O-O",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group676_q1_2_1",
+      "gt": "C",
+      "pred": "B",
+      "correct": false,
+      "type": "1_frame",
+      "category": [
+        "perpendicular",
+        "P-O",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_35122ec333dc84cf223ea366c3ad968dfece8ca02e57a8c241819837583f76f0_q1_1_2",
+      "gt": "D",
+      "pred": "B",
+      "correct": false,
+      "type": "1_frame",
+      "category": [
+        "perpendicular",
+        "P-P",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group525_q0_1_1",
+      "gt": "B",
+      "pred": "C",
+      "correct": false,
+      "type": "0_frame",
+      "category": [
+        "perpendicular",
+        "P-P",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group413_q1_5_2",
+      "gt": "A",
+      "pred": "D",
+      "correct": false,
+      "type": "1_frame",
+      "category": [
+        "perpendicular",
+        "O-O",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group041_q1_1_1",
+      "gt": "C",
+      "pred": "D",
+      "correct": false,
+      "type": "1_frame",
+      "category": [
+        "perpendicular",
+        "P-P",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group279_q0_1_1",
+      "gt": "D",
+      "pred": "B",
+      "correct": false,
+      "type": "0_frame",
+      "category": [
+        "perpendicular",
+        "P-P",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_15131f022f3c6bac68f29de62891226d69b905809770dffe1efb69a327f3f9f7_q3_5_1",
+      "gt": "C",
+      "pred": "A",
+      "correct": false,
+      "type": "3_frame",
+      "category": [
+        "perpendicular",
+        "O-O",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group131_q3_1_2",
+      "gt": "C",
+      "pred": "C",
+      "correct": true,
+      "type": "3_frame",
+      "category": [
+        "perpendicular",
+        "P-P",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group562_q2_1_2",
+      "gt": "B",
+      "pred": "B",
+      "correct": true,
+      "type": "2_frame",
+      "category": [
+        "perpendicular",
+        "P-P",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group279_q0_2_3",
+      "gt": "B",
+      "pred": "A",
+      "correct": false,
+      "type": "0_frame",
+      "category": [
+        "perpendicular",
+        "P-O",
+        "sequence",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group387_q3_1_1",
+      "gt": "B",
+      "pred": "B",
+      "correct": true,
+      "type": "3_frame",
+      "category": [
+        "perpendicular",
+        "P-P",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_ad49ff114077b5f68deb6c56119c461ed5698fe73e769b94c57ad21c7878458c_q3_5_2",
+      "gt": "B",
+      "pred": "C",
+      "correct": false,
+      "type": "3_frame",
+      "category": [
+        "perpendicular",
+        "O-O",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group411_q0_5_2",
+      "gt": "D",
+      "pred": "A",
+      "correct": false,
+      "type": "0_frame",
+      "category": [
+        "perpendicular",
+        "O-O",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_26da8aea7dc318bbeddc6d935b28352f67b12915ec4ff634e04c31495e656449_q3_1_2",
+      "gt": "B",
+      "pred": "B",
+      "correct": true,
+      "type": "3_frame",
+      "category": [
+        "perpendicular",
+        "P-P",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group316_q1_2_2",
+      "gt": "B",
+      "pred": "B",
+      "correct": true,
+      "type": "1_frame",
+      "category": [
+        "perpendicular",
+        "P-O",
+        "sequence",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group588_q1_1_1",
+      "gt": "D",
+      "pred": "B",
+      "correct": false,
+      "type": "1_frame",
+      "category": [
+        "perpendicular",
+        "P-P",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group693_q1_2_3",
+      "gt": "B",
+      "pred": "B",
+      "correct": true,
+      "type": "1_frame",
+      "category": [
+        "perpendicular",
+        "P-O",
+        "sequence",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group495_q0_1_1",
+      "gt": "D",
+      "pred": "C",
+      "correct": false,
+      "type": "0_frame",
+      "category": [
+        "perpendicular",
+        "P-P",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group316_q3_5_1",
+      "gt": "D",
+      "pred": "A",
+      "correct": false,
+      "type": "3_frame",
+      "category": [
+        "perpendicular",
+        "O-O",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group413_q1_2_2",
+      "gt": "A",
+      "pred": "A",
+      "correct": true,
+      "type": "1_frame",
+      "category": [
+        "perpendicular",
+        "P-O",
+        "sequence",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group540_q1_2_1",
+      "gt": "C",
+      "pred": "B",
+      "correct": false,
+      "type": "1_frame",
+      "category": [
+        "perpendicular",
+        "P-O",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group319_q3_5_1",
+      "gt": "A",
+      "pred": "A",
+      "correct": true,
+      "type": "3_frame",
+      "category": [
+        "perpendicular",
+        "O-O",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group525_q0_2_2",
+      "gt": "B",
+      "pred": "B",
+      "correct": true,
+      "type": "0_frame",
+      "category": [
+        "perpendicular",
+        "P-O",
+        "sequence",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group495_q2_1_1",
+      "gt": "A",
+      "pred": "C",
+      "correct": false,
+      "type": "2_frame",
+      "category": [
+        "perpendicular",
+        "P-P",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group412_q2_5_1",
+      "gt": "D",
+      "pred": "A",
+      "correct": false,
+      "type": "2_frame",
+      "category": [
+        "perpendicular",
+        "O-O",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group411_q2_2_3",
+      "gt": "B",
+      "pred": "A",
+      "correct": false,
+      "type": "2_frame",
+      "category": [
+        "perpendicular",
+        "P-O",
+        "sequence",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group495_q0_2_1",
+      "gt": "C",
+      "pred": "D",
+      "correct": false,
+      "type": "0_frame",
+      "category": [
+        "perpendicular",
+        "P-O",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group605_q1_2_2",
+      "gt": "B",
+      "pred": "B",
+      "correct": true,
+      "type": "1_frame",
+      "category": [
+        "perpendicular",
+        "P-O",
+        "sequence",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group375_q1_1_1",
+      "gt": "A",
+      "pred": "A",
+      "correct": true,
+      "type": "1_frame",
+      "category": [
+        "perpendicular",
+        "P-P",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group007_q0_1_1",
+      "gt": "B",
+      "pred": "C",
+      "correct": false,
+      "type": "0_frame",
+      "category": [
+        "perpendicular",
+        "P-P",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group534_q1_2_3",
+      "gt": "A",
+      "pred": "B",
+      "correct": false,
+      "type": "1_frame",
+      "category": [
+        "perpendicular",
+        "P-O",
+        "sequence",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group605_q1_1_2",
+      "gt": "D",
+      "pred": "C",
+      "correct": false,
+      "type": "1_frame",
+      "category": [
+        "perpendicular",
+        "P-P",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_ad49ff114077b5f68deb6c56119c461ed5698fe73e769b94c57ad21c7878458c_gen_6_2",
+      "gt": "C",
+      "pred": "C",
+      "correct": true,
+      "type": "general",
+      "category": [
+        "perpendicular",
+        "OO",
+        "meanwhile",
+        "level2"
+      ]
+    },
+    {
+      "id": "among_group319_q3_2_1",
+      "gt": "D",
+      "pred": "A",
+      "correct": false,
+      "type": "3_frame",
+      "category": [
+        "perpendicular",
+        "P-O",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group603_q2_5_2",
+      "gt": "B",
+      "pred": "C",
+      "correct": false,
+      "type": "2_frame",
+      "category": [
+        "perpendicular",
+        "O-O",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group375_q1_2_2",
+      "gt": "B",
+      "pred": "B",
+      "correct": true,
+      "type": "1_frame",
+      "category": [
+        "perpendicular",
+        "P-O",
+        "sequence",
+        "self"
+      ]
+    },
+    {
+      "id": "among_64418bebcb207a6b7936f799eb25ff417cf51625880d81c1117d30ed773be215_q1_5_2",
+      "gt": "A",
+      "pred": "C",
+      "correct": false,
+      "type": "1_frame",
+      "category": [
+        "perpendicular",
+        "O-O",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_7ae6ffaa7d3a703ce4e8dbe7c189f147024d3ca344f00ff3f8fe1587d617d117_q3_5_1",
+      "gt": "D",
+      "pred": "C",
+      "correct": false,
+      "type": "3_frame",
+      "category": [
+        "perpendicular",
+        "O-O",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group387_q3_2_1",
+      "gt": "D",
+      "pred": "A",
+      "correct": false,
+      "type": "3_frame",
+      "category": [
+        "perpendicular",
+        "P-O",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group738_q2_1_1",
+      "gt": "D",
+      "pred": "A",
+      "correct": false,
+      "type": "2_frame",
+      "category": [
+        "perpendicular",
+        "P-P",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group562_q3_2_2",
+      "gt": "A",
+      "pred": "A",
+      "correct": true,
+      "type": "3_frame",
+      "category": [
+        "perpendicular",
+        "P-O",
+        "sequence",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group646_q3_5_2",
+      "gt": "D",
+      "pred": "D",
+      "correct": true,
+      "type": "3_frame",
+      "category": [
+        "perpendicular",
+        "O-O",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group525_q3_1_1",
+      "gt": "D",
+      "pred": "B",
+      "correct": false,
+      "type": "3_frame",
+      "category": [
+        "perpendicular",
+        "P-P",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_ad49ff114077b5f68deb6c56119c461ed5698fe73e769b94c57ad21c7878458c_q2_1_1",
+      "gt": "C",
+      "pred": "B",
+      "correct": false,
+      "type": "2_frame",
+      "category": [
+        "perpendicular",
+        "P-P",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_32c0925b3c1d2f1bc0a41f62eff0ee4ad990fd816e90ba64757d1c09e3d9aaf0_gen_6_1",
+      "gt": "C",
+      "pred": "B",
+      "correct": false,
+      "type": "general",
+      "category": [
+        "perpendicular",
+        "OO",
+        "meanwhile",
+        "level2"
+      ]
+    },
+    {
+      "id": "among_group693_gen_6_1",
+      "gt": "B",
+      "pred": "A",
+      "correct": false,
+      "type": "general",
+      "category": [
+        "perpendicular",
+        "OO",
+        "meanwhile",
+        "level2"
+      ]
+    },
+    {
+      "id": "among_group706_gen_3_2",
+      "gt": "B",
+      "pred": "B",
+      "correct": true,
+      "type": "general",
+      "category": [
+        "perpendicular",
+        "PO",
+        "meanwhile",
+        "level1"
+      ]
+    },
+    {
+      "id": "among_32c0925b3c1d2f1bc0a41f62eff0ee4ad990fd816e90ba64757d1c09e3d9aaf0_q0_1_2",
+      "gt": "B",
+      "pred": "B",
+      "correct": true,
+      "type": "0_frame",
+      "category": [
+        "perpendicular",
+        "P-P",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group279_q0_5_1",
+      "gt": "D",
+      "pred": "B",
+      "correct": false,
+      "type": "0_frame",
+      "category": [
+        "perpendicular",
+        "O-O",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group279_q1_5_2",
+      "gt": "C",
+      "pred": "B",
+      "correct": false,
+      "type": "1_frame",
+      "category": [
+        "perpendicular",
+        "O-O",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group411_gen_6_2",
+      "gt": "C",
+      "pred": "B",
+      "correct": false,
+      "type": "general",
+      "category": [
+        "perpendicular",
+        "OO",
+        "meanwhile",
+        "level2"
+      ]
+    },
+    {
+      "id": "among_group562_q1_1_1",
+      "gt": "A",
+      "pred": "C",
+      "correct": false,
+      "type": "1_frame",
+      "category": [
+        "perpendicular",
+        "P-P",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group605_q2_5_2",
+      "gt": "D",
+      "pred": "A",
+      "correct": false,
+      "type": "2_frame",
+      "category": [
+        "perpendicular",
+        "O-O",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group008_q3_2_1",
+      "gt": "D",
+      "pred": "C",
+      "correct": false,
+      "type": "3_frame",
+      "category": [
+        "perpendicular",
+        "P-O",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group605_q2_1_1",
+      "gt": "B",
+      "pred": "B",
+      "correct": true,
+      "type": "2_frame",
+      "category": [
+        "perpendicular",
+        "P-P",
+        "meanwhile",
+        "self"
+      ]
+    },
+    {
+      "id": "among_group319_q0_5_2",
+      "gt": "D",
+      "pred": "C",
+      "correct": false,
+      "type": "0_frame",
+      "category": [
+        "perpendicular",
+        "O-O",
+        "meanwhile",
+        "self"
+      ]
+    }
+  ]
+}

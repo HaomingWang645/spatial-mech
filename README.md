@@ -98,6 +98,12 @@ x-spatial-manual/
 │   ├── probe_temporal_dynamics.py                   ← per-(layer, t) probe — "does later give a better read?"
 │   ├── activation_steering.py                       ← Δ = α·v injection; probe-readout evaluation
 │   ├── activation_steering_text.py                  ← same Δ, but read the logit gap between two color tokens
+│   ├── dirichlet_loss.py                            ← R_X(H) = Σ W_ij ‖h_i−h_j‖² / Σ ‖h_i−h_j‖² module (self-contained)
+│   ├── dirichlet_pilot.py                           ← four pilot experiments validating the loss before full finetuning
+│   ├── build_dirichlet_train_data.py                ← assemble (image, QA, 3D coords) JSONL from Tier C scenes
+│   ├── train_qwen_dirichlet.py                      ← LoRA finetune Qwen2.5-VL-7B with lm_ce + λ·R_X@layer
+│   ├── train_with_dirichlet.py                      ← generic training-loop template for the same loss vs any wrapper
+│   ├── eval_dirichlet_checkpoint.py                 ← reload a LoRA + base, score val set (LM, R_X, R², VQA acc)
 │   ├── visualize_q1.py                              ← layer dynamics + reconstruction examples
 │   ├── visualize_compare_tiers.py                   ← multi-tier overlay
 │   └── sanity_tier_a.py                             ← framework self-test (no VLM)
@@ -107,14 +113,20 @@ x-spatial-manual/
 │   ├── tier_a/  tier_b/  tier_c/  tier_c_free6dof/  ← rendered per-tier output
 │   ├── activations/<run_name>/                      ← layer_LL.parquet + layer_LL.npy
 │   ├── probes/<run_name>/                           ← q1_probes.json / cross_trajectory.json / camera_depth_probes.json
-│   └── steering/<run_name>/                         ← steering_results.parquet, steering.png, *.csv
+│   ├── steering/<run_name>/                         ← steering_results.parquet, steering.png, *.csv
+│   └── dirichlet_train/                             ← train.jsonl / val.jsonl with object_coords for Dirichlet finetune
+├── checkpoints/                                     ← Dirichlet LoRA sweep: <model>_lam<λ>_seed<k>/{train.log,history.json,lora/}
 ├── figures/                                         ← headline PNGs checked into the repo
 ├── logs/                                            ← extraction / probe / steering stdout captures
 └── reports/
     ├── tier_b_analysis.md                           ← fragmented-BEV result write-up
     ├── tier_b_temporal_analysis.md                  ← per-(layer, t) cross-temporal build-up
-    └── tier_c_analysis.md                           ← Tier C + H2 cross-trajectory failure
+    ├── tier_c_analysis.md                           ← Tier C + H2 cross-trajectory failure
+    ├── theory_draft.md                              ← four theorems (PCA-3D recovery, residualization, Dirichlet↔PCA, frame emergence)
+    └── dirichlet_train_results.png                  ← LoRA sweep summary across (model, λ, seed)
 ```
+
+`*.safetensors` is gitignored, so under `checkpoints/<run>/lora/` only `adapter_config.json` and `README.md` get tracked — `adapter_model.safetensors` (the LoRA weights themselves) does not. Per-run `train.log` and `history.json` are fair game for git if you want to commit a sweep's metadata.
 
 ---
 
@@ -378,19 +390,89 @@ Same `v_axis` vs `v_perp` controls; report `Δ(logit_gap)` relative to the `α=0
 
 ---
 
-## 10. Reports
+## 10. Dirichlet-loss training — Q4
+
+The Q4 question — *"can subspace correctness be used as an auxiliary fine-tuning loss, and does it beat pure NTP on 3D reasoning tasks at matched compute?"* — is implemented as a regularizer derived from Theorem 3 of [reports/theory_draft.md](reports/theory_draft.md). The Dirichlet-energy ratio of object-token hidden states $H \in \mathbb{R}^{n \times d}$ against ground-truth 3D coordinates $X \in \mathbb{R}^{n \times 3}$ is
+
+$$
+R_X(H) \;=\; \frac{\sum_{i,j} W_{ij}\, \|h_i - h_j\|^2}{\sum_{i,j} \|h_i - h_j\|^2}, \qquad W_{ij} = \exp\!\bigl(-\|x_i - x_j\|^2 / 2\tau^2\bigr).
+$$
+
+Minimizing $R_X$ pulls 3D-nearby objects to representation-nearby points; by Theorem 3, this forces the top PCs of $H$ to align with the world-coordinate axes (asymptotically, in the kernel-bandwidth limit of Theorem 3′). The total training objective is `lm_cross_entropy + λ · R_X` evaluated at one chosen LLM layer.
+
+### 10.1 [scripts/dirichlet_loss.py](scripts/dirichlet_loss.py)
+
+Self-contained PyTorch module — no `spatial_subspace` imports — exposing `dirichlet_ratio(H, X, tau)` and a `DirichletLoss` callable. Drop-in for any training loop.
+
+### 10.2 [scripts/dirichlet_pilot.py](scripts/dirichlet_pilot.py)
+
+Four lightweight validations to run before committing GPU-hours to a full sweep:
+
+- **Pilot 1 (synthetic):** minimizing $R_X$ from random-init $H$ recovers the world-coordinate axes — verifies Theorem 3 at the implementation level.
+- **Pilot 2 (layer scan):** across a pretrained VLM's layers, $R_X$ and the top-3-PC ↔ $X$ alignment $R^2$ are inversely correlated — the loss is a faithful diagnostic, not just a number.
+- **Pilot 3 (refinement):** at the peak layer, optimizing a small additive perturbation $\delta$ to minimize $R_X$ raises the alignment $R^2$ — the gradient is informative on real pretrained activations.
+- **Pilot 4 (shuffle control):** same as Pilot 3 with $X$ permuted across objects → no improvement.
+
+Outputs land under `reports/dirichlet_pilot/`.
+
+### 10.3 [scripts/build_dirichlet_train_data.py](scripts/build_dirichlet_train_data.py)
+
+Walks `data/tier_c_free6dof/`, drops scenes with fewer than 4 unique `(color, shape)` objects (the Dirichlet ratio needs ≥ 4 pairs to be meaningful), and emits one JSONL example per pre-generated QA pair. Each example carries the question, the ground-truth answer, and the full per-object `(name, 3D-centroid)` list so the loss can be computed at training time without re-reading the scene metadata. Split is **scene-level** — no scene's image appears in both train and val.
+
+```bash
+python scripts/build_dirichlet_train_data.py \
+    --scenes-root data/tier_c_free6dof \
+    --train-out   data/dirichlet_train/train.jsonl \
+    --val-out     data/dirichlet_train/val.jsonl \
+    --val-frac    0.1
+```
+
+### 10.4 [scripts/train_qwen_dirichlet.py](scripts/train_qwen_dirichlet.py)
+
+LoRA finetune of Qwen2.5-VL-7B, bypassing the inference wrapper to load the HF model directly. LoRA targets only `{q,k,v,o}_proj` on the LLM (rank 8, α = 16). A forward hook on `model.language_model.layers[--layer]` captures the residual stream; for each example, object tokens are located by string-matching `"color shape"` (with and without leading space) in the input ids, hidden vectors at those positions become $H$, and the loss is `lm_loss + λ_dir · dirichlet_ratio(H, X, tau)`. Gradient checkpointing is **off** because forward-hook losses are incompatible with it; H100-class memory is assumed for `batch_size=1` at 7B.
+
+```bash
+CUDA_VISIBLE_DEVICES=4 python scripts/train_qwen_dirichlet.py \
+    --train-jsonl data/dirichlet_train/train.jsonl \
+    --val-jsonl   data/dirichlet_train/val.jsonl \
+    --output-dir  checkpoints/qwen_lam0.3_seed0 \
+    --layer 17 --lambda-dir 0.3 --tau 2.0 \
+    --steps 200 --batch-size 1 --eval-every 50
+```
+
+`--lambda-dir 0` is the LM-only baseline; sweeps so far cover λ ∈ {0, 0.3, 1, 3} × seeds {0..7}. Each run writes `train.log`, `history.json`, and `lora/` (LoRA adapter — weights gitignored, config tracked).
+
+Eval emits `val_lm_loss`, `val_dirichlet_ratio`, `val_alignment_R2`, and a final-only `vqa_accuracy` measured by **log-prob comparison against a constructed distractor**: for `relative_position` questions the distractor flips yes/no; for `distance_order` it picks the *other* of the two named candidates in the question. Length-normalized so longer answers don't auto-win.
+
+### 10.5 [scripts/train_with_dirichlet.py](scripts/train_with_dirichlet.py)
+
+Generic template for the same loss against any model that fits the `VLMWrapper` protocol, with placeholder `make_dataset` / `extract_object_token_positions` functions to fill in. Use this as the starting point for adding LLaVA-Video or InternVL3 to the sweep.
+
+### 10.6 [scripts/eval_dirichlet_checkpoint.py](scripts/eval_dirichlet_checkpoint.py)
+
+Reload base + LoRA from a checkpoint dir and run the full eval (LM loss, Dirichlet ratio @ L, alignment R² @ L, VQA accuracy) on a given val JSONL. The intended use is held-out / OOD evaluation — e.g. evaluating a checkpoint trained on `train.jsonl` against a `val_ood.jsonl` with disjoint scenes.
+
+### 10.7 Where the results live
+
+[reports/dirichlet_train_results.png](reports/dirichlet_train_results.png) is the current sweep summary across (model ∈ {Qwen2.5-VL-7B, InternVL3}, λ ∈ {0, 0.3, 1, 3}, seed ∈ {0..7}); the underlying per-run `history.json` files sit in [checkpoints/](checkpoints/). The full theoretical justification — including why the kernel-bandwidth limit yields the world-coordinate axes — is Theorem 3 of [reports/theory_draft.md](reports/theory_draft.md).
+
+---
+
+## 11. Reports
 
 | File | What it says |
 |---|---|
 | [reports/tier_b_analysis.md](reports/tier_b_analysis.md) | Tier A → B shift: spatial subspace migrates from L0 to L18 when views are fragmented. Capacity ceiling is lower under partial views, but the *form* (linear accessibility) peaks mid-stack. Effective rank stays small throughout. |
 | [reports/tier_b_temporal_analysis.md](reports/tier_b_temporal_analysis.md) | The mid-layer peak is cross-temporal attention build-up: at every layer, R² at `t=0` is chance and climbs sharply with `t`. Biggest gap at L22 (Δ ≈ +0.47 between `t=0` and `t=6`). |
 | [reports/tier_c_analysis.md](reports/tier_c_analysis.md) | Perspective video hits Tier-A-level probe R² (0.917) but at L12 instead of L0, and the code is preserved deeper into the stack. H2 fails: `cross_traj` R² is −0.36 at L0, crosses zero at L13, maxes at +0.42 at L27 — the model's spatial code is camera-frame-dependent and only partially de-rotates through depth. |
+| [reports/theory_draft.md](reports/theory_draft.md) | Four theorems backing the empirical narrative: (1) PCA-3D recovery via Davis–Kahan, (2) residualization = orthogonal projection (kills linear shortcuts), (3) Dirichlet ↔ PCA equivalence (basis for the Q4 loss in §10), (4) frame-count emergence as a √T sample-complexity bound. Lemmas B1–B5 inlined. |
+| [reports/dirichlet_train_results.png](reports/dirichlet_train_results.png) | LoRA finetune sweep over (Qwen2.5-VL-7B / InternVL3, λ ∈ {0, 0.3, 1, 3}, seeds 0..7): VQA accuracy and Dirichlet ratio @ L17 vs training step. |
 
 The experiment plan itself is [VLM_3D_Spatial_Subspace_Experiment_Plan_1.pdf](VLM_3D_Spatial_Subspace_Experiment_Plan_1.pdf).
 
 ---
 
-## 11. Tests
+## 12. Tests
 
 ```bash
 pytest -q
@@ -409,9 +491,9 @@ Covers (all without loading a VLM):
 
 ---
 
-## 12. Configuration reference
+## 13. Configuration reference
 
-### 12.1 Base scene controls — all tiers inherit
+### 13.1 Base scene controls — all tiers inherit
 
 ```yaml
 min_objects: 3
@@ -433,7 +515,7 @@ image_size: 448           # multiple of 28 for Qwen2.5-VL's 14×14 patch × 2×2
 background_gray: 155
 ```
 
-### 12.2 Tier B additions
+### 13.2 Tier B additions
 
 ```yaml
 n_frames: 16              # 8 / 16 / 32 are the plan variants
@@ -446,7 +528,7 @@ trajectory:
 temporal_shuffle: false   # plan §3.2 ablation — permutes rendered frames
 ```
 
-### 12.3 Tier C additions
+### 13.3 Tier C additions
 
 ```yaml
 fov_degrees: 60.0
@@ -475,7 +557,7 @@ trajectory:
     repair_max_iters:         8     # blend-toward-anchor iterations when no object visible
 ```
 
-### 12.4 Model config
+### 13.4 Model config
 
 ```yaml
 name: Qwen2.5-VL-72B
@@ -490,7 +572,7 @@ prompt: "Describe the spatial layout of the objects in this image."
 
 ---
 
-## 13. Reproducibility & seeding
+## 14. Reproducibility & seeding
 
 - `spatial_subspace.utils.set_seed` seeds Python `random`, `numpy`, `PYTHONHASHSEED`, and (if importable) `torch` + CUDA.
 - Every script accepts `--seed` (default 0). Split constructors in `probes.py` take `seed` directly.
@@ -499,7 +581,7 @@ prompt: "Describe the spatial layout of the objects in this image."
 
 ---
 
-## 14. Known caveats, in roughly decreasing order of how much they matter
+## 15. Known caveats, in roughly decreasing order of how much they matter
 
 1. **Only Qwen2.5-VL is wrapped.** The plan calls for ≥3 open models. Adding LLaVA-Video-7B / InternVL3-8B is a single-file job against the `VLMWrapper` protocol — expose `forward`, `patch_pixels`, `image_input_hw`, `close`, and optionally `install_intervention` + `temporal_patch_size`. The mid-layer-peak / H2-failure findings could be Qwen-architecture-specific and need to be checked.
 2. **Hand-rolled rasterizer simplification.** Tier C uses filled circles / convex hulls / oblique shadows — no per-material lighting, no textures, no explicit floor grid. Fine for position probing, but richer visuals (Kubric/Blender) could change the picture. The plan suggests Kubric for Tier C going forward.
@@ -507,19 +589,23 @@ prompt: "Describe the spatial layout of the objects in this image."
 4. **Tier D (real video) not yet implemented.** ScanNet / EmbodiedScan integration is next on the list — the probing scripts work unchanged as long as the adapter produces `Scene` objects with ground-truth 3D centroids and per-frame masks.
 5. **`sklearn.MLPRegressor` diverges at late layers.** R² goes strongly negative; not reliable as the linearity ceiling. A torch-based implementation with proper weight decay and early stopping is the fix.
 6. **Scale-ambiguity diagnostic (plan §3.7.1) not yet implemented.** Paired `(a)` / `(b)` / `(c)` scenes at `1×` and `2×` rescales; predicted by the plan, needed to verify that the per-scene-normalized labels are not losing real signal.
-7. **Q4 auxiliary-loss fine-tuning and Q5 Dirichlet-energy theory not yet implemented.** Those are the dominant compute costs in the plan (§10.2: ~10k A100-h for Q4) and have not been attempted yet.
+7. **Q4 sweep is still pilot-scale.** The Dirichlet-loss training pipeline is implemented (§10) and a first sweep over (Qwen2.5-VL-7B / InternVL3, λ ∈ {0, 0.3, 1, 3}, seeds 0..7, 200 steps each) is captured in [reports/dirichlet_train_results.png](reports/dirichlet_train_results.png) — but this is far below the plan's §10.2 budget (~10k A100-h). Larger models, longer training, more λ values, and a held-out OOD val split are the natural next steps; [scripts/eval_dirichlet_checkpoint.py](scripts/eval_dirichlet_checkpoint.py) is in place to score them.
+
+8. **Q5 theory is in draft form.** [reports/theory_draft.md](reports/theory_draft.md) covers the four core theorems (PCA-3D recovery, residualization-as-projection, Dirichlet ↔ PCA, frame-count emergence) with full proofs, but is still labeled "draft" — it has not been externally reviewed and the empirical-tightness remarks (e.g. matching the observed RSA values) are sketches rather than rigorous calibrations.
 
 ---
 
-## 15. References
+## 16. References
 
 - The plan: [VLM_3D_Spatial_Subspace_Experiment_Plan_1.pdf](VLM_3D_Spatial_Subspace_Experiment_Plan_1.pdf)
 - Qwen2.5-VL model family: Qwen2.5-VL-{7B, 32B, 72B}-Instruct on Hugging Face, served via `Qwen2_5_VLForConditionalGeneration` in `transformers`.
 - CLEVR (Johnson et al., 2017) — synthetic-scene inspiration for the Tier A/B/C scene generator. The per-object-segmentation + JSON-metadata recipe is adapted from the original CLEVR generator.
 - Kubric — recommended replacement for the hand-rolled rasterizer in Tier C when better visuals are needed.
+- Park, Lee, Lubana, Yang, Okawa, Nishi, Wattenberg, Tanaka (ICLR 2025) — *In-context learning of representations*. Discrete-graph precedent for the Dirichlet ↔ PCA equivalence formalized in [reports/theory_draft.md](reports/theory_draft.md) Theorem 3.
+- Belkin & Niyogi (2003) — *Laplacian eigenmaps for dimensionality reduction and data representation*. Theorem 3′ of the theory draft uses the Belkin–Niyogi limit to extend the discrete result to continuous 3D scenes.
 
 ---
 
-## 16. License
+## 17. License
 
 No license file has been added yet. Until one is, treat this repository as "all rights reserved" — do not redistribute, and check with the author before building on it externally. A permissive license (likely MIT or Apache-2.0) will be added before any public release.

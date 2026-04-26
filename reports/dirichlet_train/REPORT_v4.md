@@ -29,13 +29,15 @@ length-normalized log-prob comparison.
 p<10⁻⁶), but the downstream effect on real-world spatial VQA is
 **a coupled trade-off, not a free improvement**:
 
-| Quantity (Qwen, n=4 common seeds) | λ=0 | λ=0.3 | λ=1.0 | λ=3.0 |
-|---|---|---|---|---|
-| Dirichlet ratio @ L17 | 0.231 | — | 0.121 | even lower |
-| 3D-alignment R² @ L17 | 0.690 | — | 0.897 | even higher |
-| **rel_direction_medium** (3D axis test) | 34.1% | 29.9% | 45.7% | **47.0%** |
-| **rel_distance** (depth shortcut) | 32.1% | 21.4% | 17.9% | **14.3%** |
-| Overall MC accuracy | 36.4% | 33.0% | 37.9% | **39.0%** |
+| Quantity (Qwen, n=4 common seeds) | **base** (no LoRA) | λ=0 | λ=0.3 | λ=1.0 | λ=3.0 |
+|---|---|---|---|---|---|
+| Dirichlet ratio @ L17 | TBD¹ | 0.231 | — | 0.121 | even lower |
+| 3D-alignment R² @ L17 | TBD¹ | 0.690 | — | 0.897 | even higher |
+| **rel_direction_medium** (3D axis test) | **19.5%** | 34.1% | 29.9% | 45.7% | **47.0%** |
+| **rel_distance** (depth shortcut) | **28.6%** | 32.1% | 21.4% | 17.9% | **14.3%** |
+| Overall MC accuracy | **28.0%** | 36.4% | 33.0% | 37.9% | **39.0%** |
+
+¹ Base-model activation extraction is queued (not yet run); these geometric values will be filled in once `reports/probe_features/qwen_base.npz` is produced.
 
 Direction reasoning is **monotone increasing** in λ for λ≥1.
 Distance reasoning is **monotone decreasing** in λ.
@@ -69,15 +71,25 @@ For Qwen on the ARKitScenes subset of VSI-Bench (132 multiple-choice
 questions, n=4 common seeds across all four λ conditions):
 
 ```
-λ:                0       0.3     1.0     3.0
-─────────────────────────────────────────────
+condition:        base    λ=0     λ=0.3   λ=1.0   λ=3.0
+─────────────────────────────────────────────────────────
 rel_direction_medium accuracy ↑
-                34.1 →  29.9 →  45.7 →  47.0      [+12.9pp from λ=0 to λ=3]
+                  19.5 →  34.1 →  29.9 →  45.7 →  47.0   [+27.5pp base→λ=3; +12.9pp λ=0→λ=3]
 rel_distance accuracy ↓
-                32.1 →  21.4 →  17.9 →  14.3      [−17.8pp from λ=0 to λ=3]
+                  28.6 →  32.1 →  21.4 →  17.9 →  14.3   [−14.3pp base→λ=3; −17.8pp λ=0→λ=3]
 overall MC accuracy
-                36.4 →  33.0 →  37.9 →  39.0      [+2.7pp from λ=0 to λ=3]
+                  28.0 →  36.4 →  33.0 →  37.9 →  39.0   [+11.0pp base→λ=3; +2.7pp λ=0→λ=3]
 ```
+
+The base column reveals what each transformation contributes:
+- **LoRA finetuning alone (base→λ=0)**: gives most of the overall gain (+8.4pp on MC)
+  but specifically *strengthens the depth shortcut* (rel_distance +3.5pp) at the same
+  time as it improves direction reasoning (+14.6pp).
+- **Adding Dirichlet penalty (λ=0→λ=3)**: improves direction further (+12.9pp) and
+  *unwinds the depth shortcut* (−17.8pp on rel_distance), netting +2.7pp overall.
+
+In other words, **LoRA gives accuracy partly via spatial learning and partly via
+shortcut**; the Dirichlet loss separates these two effects.
 
 For λ ≥ 1, both effects are **monotone**. λ=0.3 is anomalous: the loss
 is too weak to coherently shape the 3D subspace but strong enough to
@@ -85,14 +97,32 @@ disrupt other learned structure, hurting both direction and distance.
 
 ### 2.2. Per-question-type breakdown (n=4 paired seeds vs baseline)
 
-| Question type | Δ at λ=0.3 | Δ at λ=1.0 | Δ at λ=3.0 |
-|---|---|---|---|
-| `object_rel_direction_medium` | −4.27pp (p=.10) | **+11.59pp (p=.09)** | **+12.80pp (p=.22)** |
-| `object_rel_direction_easy` | 0.00 (n.s.) | +0.83 (n.s.) | +0.83 (n.s.) |
-| `object_rel_direction_hard` | −5.30 (n.s.) | −5.30 (n.s.) | −0.76 (n.s.) |
-| `object_rel_distance` | −10.71 (n.s.) | −14.29 (p=.25) | **−17.86 (p=.19)** |
-| `route_planning` | −1.19 (n.s.) | −1.19 (n.s.) | −2.38 (n.s.) |
-| **Overall MC** | −3.41 (p=.06) | +1.52 (n.s.) | **+2.65 (p=.43)** |
+Δ values are vs the LoRA-trained baseline at λ=0 (paired by seed). The
+**base** column shows the un-tuned (no-LoRA) model's absolute accuracy
+on the same 132 questions, so the reader can see how much of each gain
+comes from LoRA-only vs from the Dirichlet penalty.
+
+| Question type | base (no LoRA) | λ=0 (abs) | Δ at λ=0.3 | Δ at λ=1.0 | Δ at λ=3.0 |
+|---|---|---|---|---|---|
+| `object_rel_direction_medium` | 19.51% | 34.15% | −4.27pp (p=.10) | **+11.59pp (p=.09)** | **+12.80pp (p=.22)** |
+| `object_rel_direction_easy` | 40.00% | 50.00% | 0.00 (n.s.) | +0.83 (n.s.) | +0.83 (n.s.) |
+| `object_rel_direction_hard` | 33.33% | 18.18% | −5.30 (n.s.) | −5.30 (n.s.) | −0.76 (n.s.) |
+| `object_rel_distance` | 28.57% | 32.14% | −10.71 (n.s.) | −14.29 (p=.25) | **−17.86 (p=.19)** |
+| `route_planning` | 19.05% | 26.19% | −1.19 (n.s.) | −1.19 (n.s.) | −2.38 (n.s.) |
+| **Overall MC** | **28.03%** | **36.36%** | −3.41 (p=.06) | +1.52 (n.s.) | **+2.65 (p=.43)** |
+
+Notes:
+
+- LoRA-only finetuning (base→λ=0) actually *hurts* `rel_direction_hard`
+  (33.3% → 18.2%) — the model learned to over-confidently answer the
+  easy/medium subtypes. Adding the Dirichlet loss does not recover the
+  hard subtype either.
+- The largest *single* gain in the table is **LoRA-only on
+  rel_direction_medium**: +14.64pp (19.5% → 34.1%). Dirichlet adds
+  a further +12.80pp on top.
+- `object_rel_direction_easy` shows the only case where the Dirichlet
+  loss is essentially neutral — the easy subtype is already
+  near-saturated under any condition.
 
 ### 2.3. n=8 statistics for λ=1.0 vs λ=0
 

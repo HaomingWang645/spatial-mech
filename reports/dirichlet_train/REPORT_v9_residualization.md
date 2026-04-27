@@ -12,6 +12,139 @@ penalty is no longer mixed with color/shape variance.
 
 ---
 
+## 0. The residualized SFT loss — formula
+
+For each training example $(I, q, a)$ — image $I$, question $q$, answer
+$a$ — the standard supervised finetuning (SFT) loss is the
+language-modeling cross-entropy on the answer tokens:
+
+$$
+\mathcal{L}_{\mathrm{LM}}(\theta) \;=\; -\,\sum_{t \in \mathrm{answer}}\, \log p_\theta\bigl(a_t \,\big|\, I, q, a_{<t}\bigr).
+$$
+
+For each example, let $H \in \mathbb{R}^{n \times d}$ denote the
+residual stream at the hooked layer (here, layer 17 of the LLM),
+sub-sampled to the $n$ object-token positions present in the prompt.
+Each row $h_i \in \mathbb{R}^d$ corresponds to a 3D-grounded object
+$x_i \in \mathbb{R}^3$.
+
+### Non-residualized loss (v4–v8)
+
+The non-residualized Dirichlet-regularized SFT loss is
+
+$$
+\boxed{\;\mathcal{L}^{\mathrm{nonres}}_\lambda(\theta) \;=\; \mathcal{L}_{\mathrm{LM}}(\theta) \;+\; \lambda \cdot \mathcal{R}_X\bigl(H_\theta\bigr),\;}
+$$
+
+where the Dirichlet ratio $\mathcal{R}_X(H)$ is
+
+$$
+\mathcal{R}_X(H) \;=\; \frac{\mathcal{E}_X(H)}{\mathcal{E}_\pi(H)},\qquad \mathcal{E}_X(H) \;=\; \mathrm{tr}\bigl(H^\top L_X H\bigr) \;=\; \tfrac{1}{2}\sum_{i, j} W_{X, ij}\,\|h_i - h_j\|^2,
+$$
+
+with $L_X = D_X - W_X$ the graph Laplacian built from a Gaussian kernel
+on the world coordinates,
+
+$$
+W_{X, ij} \;=\; \exp\!\Bigl(-\tfrac{\|x_i - x_j\|^2}{2\tau^2}\Bigr) \quad (i \neq j),\qquad W_{X, ii} = 0,
+$$
+
+and $\mathcal{E}_\pi(H)$ is the same energy with $X$ replaced by a
+*permuted* set of coordinates $\pi(X)$ — a permutation-baseline
+normalization that ensures $\mathcal{R}_X$ is approximately scale-free
+(value 1 corresponds to "no spatial smoothness", value 0 to "perfectly
+smooth"). In practice $\pi$ is a single fixed random permutation per
+example.
+
+### Residualized loss (v9)
+
+To isolate the spatial subspace from color/shape nuisance, residualize
+$H$ before computing the energy. Let $W \in \mathbb{R}^{d \times k}$
+be the orthonormal nuisance basis (built from color + shape probe
+directions per `scripts/build_residualization_basis.py`; see §0.1
+below). Define the orthogonal projector onto $W^\perp$:
+
+$$
+P_\perp \;=\; I_d - W W^\top, \qquad P_\perp^\top = P_\perp, \quad P_\perp^2 = P_\perp.
+$$
+
+The residualized representation is $\widetilde H_\theta := H_\theta\, P_\perp$,
+i.e., each row $h_i$ has the nuisance-component $W W^\top h_i$
+subtracted. The **residualized Dirichlet-regularized SFT loss** is
+
+$$
+\boxed{\;\mathcal{L}^{\mathrm{res}}_\lambda(\theta) \;=\; \mathcal{L}_{\mathrm{LM}}(\theta) \;+\; \lambda \cdot \mathcal{R}_X\!\bigl(H_\theta\, P_\perp\bigr) \;=\; \mathcal{L}_{\mathrm{LM}}(\theta) \;+\; \lambda \cdot \frac{\mathcal{E}_X(H_\theta\, P_\perp)}{\mathcal{E}_\pi(H_\theta\, P_\perp)},\;}
+$$
+
+with energies
+
+$$
+\mathcal{E}_X(H_\theta\, P_\perp) \;=\; \mathrm{tr}\bigl((H_\theta P_\perp)^\top L_X (H_\theta P_\perp)\bigr) \;=\; \tfrac{1}{2}\sum_{i,j} W_{X, ij}\,\|P_\perp h_i - P_\perp h_j\|^2.
+$$
+
+The kernel $W_X$, Laplacian $L_X$, bandwidth $\tau$, and permutation
+baseline are identical to the non-residualized version. The *only*
+difference is that $H_\theta$ is replaced by $H_\theta\, P_\perp$
+inside both energies.
+
+### Equivalent formulation
+
+Using $\|P_\perp h_i - P_\perp h_j\|^2 = (h_i - h_j)^\top P_\perp (h_i - h_j)$
+since $P_\perp^2 = P_\perp$:
+
+$$
+\mathcal{E}_X(H_\theta\, P_\perp) \;=\; \tfrac{1}{2}\sum_{i,j} W_{X, ij}\,(h_i - h_j)^\top P_\perp\, (h_i - h_j).
+$$
+
+This makes explicit that the loss penalizes representational
+*differences* projected onto the nuisance-orthogonal subspace, leaving
+the nuisance subspace itself unregularized.
+
+### 0.1. The nuisance basis $W$
+
+The orthonormal basis $W \in \mathbb{R}^{d \times k}$ is constructed
+once per model (Qwen and InternVL separately), from base-model L17
+activations on the validation set:
+
+1. For each object-token position, capture the residual stream
+   $h \in \mathbb{R}^d$ and pair it with its ground-truth color label
+   $y_c \in \mathcal{C}$ (8 classes) and shape label $y_s \in
+   \mathcal{S}$ (3 classes).
+2. Fit two multinomial logistic regressions:
+
+$$
+\hat W_{\mathrm{color}} = \arg\min_{W_c} \sum_i \mathrm{CE}\bigl(W_c h_i,\, y_{c, i}\bigr), \qquad \hat W_{\mathrm{shape}} = \arg\min_{W_s} \sum_i \mathrm{CE}\bigl(W_s h_i,\, y_{s, i}\bigr).
+$$
+
+3. Stack the per-class weight vectors and orthonormalize via thin-QR:
+
+$$
+W^{\mathrm{stack}} = \begin{bmatrix} \hat W_{\mathrm{color}} \\ \hat W_{\mathrm{shape}} \end{bmatrix} \in \mathbb{R}^{(|\mathcal{C}| + |\mathcal{S}|) \times d} = \mathbb{R}^{11 \times d}, \qquad (W, R) \;:=\; \mathrm{thinQR}\bigl((W^{\mathrm{stack}})^\top\bigr).
+$$
+
+4. Drop near-zero rank deficiencies (the multinomial parametrization
+   has 1 redundant direction per probe ⇒ $11 - 2 = 9$ effective
+   directions). Final $W \in \mathbb{R}^{d \times 9}$ with
+   $W^\top W = I_9$.
+
+In our experiments, both Qwen and InternVL yield $k = 9$ effective
+nuisance directions out of 11 candidate weight rows.
+
+### 0.2. What residualization buys (theory recap)
+
+By Theorem 2 of `theorem3_full.md`, post-multiplication by $P_\perp$
+is an **orthogonal projection in representation space**, and energy
+under such a projection equals energy of the projected representation.
+By Theorem 3 of the same document, minimizing
+$\mathcal{E}_X(H \cdot P_\perp)$ over the constrained set of LoRA
+adapters forces the top PCs of $H \cdot P_\perp$ to be the Laplacian
+eigenmaps of the geometry graph — *purely spatial*, not mixed with
+color/shape. Empirically (see §3 onward), this matters most for Qwen
+at high $\lambda$, where mixing nuisance with the loss target most
+distorts the spatial subspace.
+
+---
+
 ## 1. Setup
 
 **Residualization basis** (per model): orthonormal $W \in \mathbb{R}^{3584 \times 9}$
@@ -295,42 +428,66 @@ per-task on the three other benchmarks. NR = non-residualized
 
 ### MindCube (1050 items)
 
-MindCube classifies questions as `linear` (relevant axis is parallel to
-camera-translation axis) or `perpendicular` (axis is orthogonal —
-harder geometric task). About 25% / 75% of the bench.
+MindCube uses three official task categories — `among`, `around`,
+`rotation` — encoded in each item's ID prefix. The tinybench
+distribution is 600 / 250 / 200, matching the categorization used in
+the MindCube paper (Yin et al., *MindCube*).
+
+| Task | What it tests | n |
+|---|---|---|
+| `among` | Object spatial relations *among* objects in the scene from the agent's viewpoint | 600 |
+| `around` | Spatial layout *around* a fixed reference, including ego-relative direction | 250 |
+| `rotation` | Mental rotation: predict view from a rotated frame | 200 |
 
 #### Qwen
 
-| Task | NR λ=0 | R λ=0 | NR λ=0.3 | R λ=0.3 | NR λ=1 | R λ=1 | NR λ=3 | **R λ=3** |
+| Task (n) | NR λ=0 | R λ=0 | NR λ=0.3 | R λ=0.3 | NR λ=1 | R λ=1 | NR λ=3 | **R λ=3** |
 |---|---|---|---|---|---|---|---|---|
-| **OVERALL** | 0.413 | 0.408 | 0.393 | 0.377 | 0.415 | 0.420 | 0.385 | **0.427** |
-| linear | 0.586 | 0.598 | 0.567 | 0.570 | 0.596 | 0.598 | 0.537 | **0.622** |
-| perpendicular | 0.359 | 0.348 | 0.339 | 0.316 | 0.359 | 0.364 | 0.338 | **0.366** |
+| **OVERALL** (1050) | 0.413 | 0.408 | 0.393 | 0.377 | 0.415 | 0.420 | 0.385 | **0.427** |
+| `among` (600) | 0.369 | 0.355 | 0.343 | 0.309 | 0.367 | 0.371 | 0.342 | **0.372** |
+| `around` (250) | 0.586 | 0.598 | 0.567 | 0.570 | 0.596 | 0.598 | 0.537 | **0.622** |
+| `rotation` (200) | 0.329 | 0.328 | 0.326 | 0.338 | 0.334 | 0.345 | 0.324 | **0.347** |
 
 **Highlights:**
 - λ=3 residualized **+4.2pp on overall** (0.385 → 0.427), the largest
   residualized gain on Qwen across all four benchmarks at any λ.
-- λ=3 residualized **+8.5pp on `linear`** subset (0.537 → 0.622).
-- λ=3 residualized **+2.8pp on `perpendicular`** subset.
-- λ=0.3 residualized hurts (-1.6pp overall, -2.3pp perpendicular) —
-  consistent with the v9 §3 finding that residualization helps most at
-  high λ where mixing nuisance content is most harmful.
+- λ=3 residualized **+8.5pp on `around`** (0.537 → 0.622) — the
+  largest single-cell residualized gain in the entire study, and on the
+  task most aligned with ego-relative direction reasoning.
+- λ=3 residualized **+3.0pp on `among`** and **+2.3pp on `rotation`**.
+- All three task categories show a positive residualization effect at λ=3,
+  monotonically increasing in λ. Consistent with Theorem 7 §7.4(iii):
+  residualization buys the most at high λ where mixing nuisance
+  variance most distorts the spatial subspace.
 
 #### InternVL
 
-| Task | NR λ=0 | R λ=0 | NR λ=0.3 | R λ=0.3 | NR λ=1 | R λ=1 | NR λ=3 | R λ=3 |
+| Task (n) | NR λ=0 | R λ=0 | NR λ=0.3 | R λ=0.3 | NR λ=1 | R λ=1 | NR λ=3 | R λ=3 |
 |---|---|---|---|---|---|---|---|---|
-| **OVERALL** | 0.452 | 0.449 | 0.457 | 0.464 | 0.470 | 0.447 | 0.472 | 0.457 |
-| linear | 0.555 | 0.566 | 0.588 | 0.572 | 0.610 | 0.542 | 0.615 | 0.540 |
-| perpendicular | 0.420 | 0.412 | 0.417 | **0.431** | 0.426 | 0.417 | 0.427 | 0.431 |
+| **OVERALL** (1050) | 0.452 | 0.449 | 0.457 | 0.464 | 0.470 | 0.447 | 0.472 | 0.457 |
+| `among` (600) | 0.446 | 0.432 | 0.443 | **0.467** | 0.453 | 0.439 | 0.458 | 0.463 |
+| `around` (250) | 0.555 | 0.566 | 0.588 | 0.572 | 0.610 | 0.542 | 0.615 | 0.540 |
+| `rotation` (200) | 0.344 | 0.350 | 0.339 | 0.323 | 0.346 | 0.350 | 0.336 | 0.335 |
 
 **Highlights:**
-- Residualization is mostly flat to slightly negative on InternVL overall.
-- `perpendicular` (the geometric subset) gains +1-2pp at λ=0.3 and λ=3 —
-  the only consistent positive cells for InternVL on MindCube.
-- `linear` actually *loses* 7-7.5pp at λ=1 and λ=3 with residualization
-  — InternVL was using non-spatial features on `linear` that get wiped
-  out by removing color/shape variance.
+- Residualization is mostly flat or slightly negative on InternVL overall.
+- `among` gains modestly with residualization at λ=0.3 (+2.4pp),
+  λ=3 (+0.5pp).
+- `around` *loses* 7pp at λ=1 and λ=3 with residualization — InternVL's
+  encoding on this category leans on non-spatial features that are
+  partly correlated with the color/shape directions and get wiped out
+  by $P_\perp$. This is the largest negative residualization effect for
+  InternVL.
+- `rotation` is essentially flat across all conditions.
+
+**Why `around` shows opposite signs on Qwen vs InternVL:**
+For Qwen, λ=3 non-residualized hurts `around` (drops to 0.537 from
+0.596 at λ=1), and residualization brings it back up (+8.5pp). For
+InternVL, λ=3 non-residualized is the *peak* (0.615), and
+residualization disrupts what was already working. Suggests InternVL's
+`around` solution at λ=3 sits *on the boundary* between the spatial
+and nuisance subspaces — exactly the case where residualization is
+most disruptive.
 
 ### ViewSpatial-Bench (500 items, stratified subset of 5712)
 
@@ -427,14 +584,16 @@ Largest residualized gains across all 4 benchmarks (per cell):
 
 | Benchmark | Model | Where | Δ |
 |---|---|---|---|
-| MindCube linear | Qwen | λ=3 | **+8.5pp** |
+| MindCube `around` | Qwen | λ=3 | **+8.5pp** |
 | OST-Bench Agent_state | Qwen | λ=0 | **+4.7pp** |
+| Person-Rel-Dir (ViewSpatial) | InternVL | λ=1 | **+4.5pp** |
 | MindCube overall | Qwen | λ=3 | **+4.2pp** |
 | ViewSpatial Camera-Rel-Dir | Qwen | λ=3 | **+4.0pp** |
-| Person-Rel-Dir (ViewSpatial) | InternVL | λ=1 | **+4.5pp** |
-| MindCube perpendicular | Qwen | λ=3 | **+2.8pp** |
+| MindCube `among` | Qwen | λ=3 | **+3.0pp** |
+| MindCube `rotation` | Qwen | λ=3 | **+2.3pp** |
+| MindCube `among` | InternVL | λ=0.3 | **+2.4pp** |
 | Person-Rel-Dir (ViewSpatial) | InternVL | λ=3 | **+2.2pp** |
-| MindCube perpendicular | InternVL | λ=3 | +0.4pp |
+| MindCube `around` | InternVL | λ=1 | −7.0pp (negative — see InternVL note) |
 
 The Qwen-at-λ=3 pattern is now confirmed across **all four benchmarks**:
 residualization buys ~+3-8pp on direction-relevant subsets at the

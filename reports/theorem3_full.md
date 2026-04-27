@@ -405,9 +405,258 @@ The graph Laplacian $L$ depends on the kernel bandwidth $\tau$. Write $L^{(\tau)
 
 **Theorem 3′.** *Let $x_1, \ldots, x_n$ be i.i.d. samples from a smooth density $\rho$ on a compact convex set $\Omega \subset \mathbb{R}^3$, with $\rho > 0$ on $\Omega$. Let $L^{(\tau)}$ be built from the Gaussian kernel with bandwidth $\tau = \tau_n$ where $\tau_n \to 0$ and $n\tau_n^{3+\alpha} \to \infty$ for some $\alpha > 0$. Then for any fixed $k$, with probability tending to $1$ as $n \to \infty$, the eigenvector $z^{(k+1)}(x_i)$ of $L^{(\tau_n)}$ converges, uniformly in $i$, to $\rho(x_i)^{-1/2} \phi^{(k)}(x_i)$, where $\phi^{(k)}$ is the $k$-th non-constant eigenfunction of the weighted Laplace–Beltrami operator $\Delta_\rho := \rho^{-1} \mathrm{div}(\rho \nabla \cdot)$ on $\Omega$. For uniform $\rho$ on a Euclidean cube, $\phi^{(1)}, \phi^{(2)}, \phi^{(3)}$ are the centered coordinate functions $x, y, z$.*
 
-The proof requires the spectral perturbation theory of compact integral operators and is well outside the scope of this expanded note; see Belkin & Niyogi (2003), *Laplacian eigenmaps for dimensionality reduction*, Thm. 3.1; and von Luxburg, Belkin & Bousquet (2008), *Consistency of spectral clustering*, Ann. Statist. 36(2).
+The full proof is outside the scope of this document, but the proof
+*structure* — and which results from the literature do which work —
+is worth explicit treatment. We give a detailed sketch in §6.1 below.
 
 The take-home: Theorem 3 says PCs equal Laplacian eigenvectors; Theorem 3′ says those eigenvectors *literally are* the world coordinates in the appropriate kernel limit.
+
+### 6.1. Detailed proof sketch of Theorem 3′
+
+The proof has **two non-trivial ingredients** and a third bookkeeping
+step. The two non-trivial ingredients live in different papers:
+
+| Ingredient | Provides | Reference |
+|---|---|---|
+| (A) Pointwise operator convergence | $\frac{1}{n\tau_n^{d+2}} L^{(\tau_n)} f(x_i) \to -\Delta_\rho f(x_i)$ at each fixed point $x_i$ | Belkin & Niyogi (2003), Thm. 3.1 |
+| (B) Spectral convergence | eigenvalues / eigenvectors of $L^{(\tau_n)}$ converge to those of $-\Delta_\rho$ | von Luxburg, Belkin & Bousquet (2008), Thm. 21 |
+| (C) Identify eigenfunctions on $\Omega$ | for Euclidean $\Omega \subset \mathbb{R}^3$, $\phi^{(1,2,3)}$ ∝ centered $x, y, z$ | classical PDE on rectangles |
+
+**Why two papers, not one?** Pointwise convergence (A) is not enough
+to conclude eigenvector convergence — operators can converge
+pointwise without their spectra converging. The spectral statement
+(B) requires a stronger mode of convergence (collectively compact /
+norm convergence) plus a spectral gap. (B) is the harder, deeper
+result; (A) supplies the limit operator that (B) then reasons about.
+
+#### Step (A): Belkin–Niyogi (2003), the pointwise operator limit
+
+**Setup.** Define the empirical (degree-rescaled) integral operator on
+functions $f: \Omega \to \mathbb{R}$:
+
+$$
+\widetilde L^{(\tau)}_n f(x) \;:=\; \frac{1}{\tau^{d+2}}\Bigl[\, f(x) \cdot \tfrac{1}{n}\sum_{j=1}^n \kappa_\tau(x, x_j) \;-\; \tfrac{1}{n}\sum_{j=1}^n \kappa_\tau(x, x_j)\, f(x_j) \,\Bigr]. \tag{B-N1}
+$$
+
+This is the natural function-space lift of the matrix $L^{(\tau)} =
+D - W$: applied to a vector $\bigl(f(x_1), \ldots, f(x_n)\bigr)^\top$
+it returns the same thing as the matrix $L^{(\tau)}$ does (up to the
+$\frac{1}{n\tau^{d+2}}$ scaling).
+
+**The Belkin–Niyogi pointwise theorem (paraphrased).** *Let $f \in
+C^2(\Omega)$. Fix $x \in \Omega$ in the interior. Then*
+
+$$
+\widetilde L^{(\tau)}_n f(x) \;\xrightarrow[n \to \infty]{\text{a.s.}}\; -c_d\,\rho(x)\,\Delta f(x) - c_d\,\nabla\rho(x) \cdot \nabla f(x) + O(\tau)
+$$
+
+*as $n \to \infty$ first, then $\tau \to 0$, where $c_d > 0$ is a
+kernel-dependent constant. The right-hand side equals
+$-c_d \cdot \rho(x) \cdot \Delta_\rho f(x)$, where $\Delta_\rho f =
+\rho^{-1} \mathrm{div}(\rho \nabla f)$ is the weighted Laplace–Beltrami
+operator with respect to the data density.*
+
+**Proof idea (1-paragraph).** Taylor-expand $f(x_j) = f(x) +
+\nabla f(x)^\top (x_j - x) + \tfrac{1}{2}(x_j - x)^\top H_f(x)
+(x_j - x) + O(\|x_j - x\|^3)$, substitute into (B-N1), and use the
+fact that the Gaussian kernel concentrates as $\tau \to 0$. The
+zeroth-order term cancels. The first-order term integrates to zero
+by symmetry of the kernel. The second-order term gives the Hessian
+trace, i.e., the Laplacian, weighted by the local data density.
+
+**What (A) does not give.** (A) is *pointwise*. It says: for any
+fixed smooth test function and fixed point, the operator converges.
+It does *not* say the eigenfunctions of the operator converge — that
+requires uniform convergence and a spectral gap, which is (B)'s job.
+
+#### Step (B): von Luxburg–Belkin–Bousquet (2008), spectral convergence
+
+This is the deep step. The paper "Consistency of spectral clustering"
+(Annals of Statistics 36(2), 555–586) is the standard reference for
+proving that *eigenvectors* of empirical graph Laplacians converge to
+eigenfunctions of their continuous limit. The key tools are
+**collectively compact operator theory** and **resolvent
+perturbation theory**.
+
+**Operator-theoretic recasting.** Lift the matrix $L^{(\tau)}_n$ to
+an operator on $C(\Omega)$ as follows. Define
+
+$$
+\mathcal{T}^{(\tau)}_n f(x) \;:=\; \tfrac{1}{n} \sum_{j=1}^n \kappa_\tau(x, x_j)\, f(x_j), \qquad f \in C(\Omega).
+$$
+
+This is a finite-rank integral operator on the continuous function
+space. Its restriction to the data points $\{x_1, \ldots, x_n\}$ is
+the matrix $\frac{1}{n} W^{(\tau)}$. Define $\mathcal{T}^{(\tau)}$ similarly,
+replacing the empirical sum with the population integral against
+$\rho$:
+
+$$
+\mathcal{T}^{(\tau)} f(x) \;:=\; \int_\Omega \kappa_\tau(x, y)\, f(y)\, \rho(y)\, dy.
+$$
+
+**Theorem 21 of vLBB 2008 (paraphrased).** *Suppose:*
+
+1. $\kappa_\tau$ *is a continuous, symmetric, positive kernel.*
+2. *The kernel is bounded:* $\sup_{x, y} \kappa_\tau(x, y) < \infty$.
+3. *The data points $x_1, \ldots, x_n$ are i.i.d. $\sim \rho$, $\rho > 0$.*
+4. *The eigenvalue $\lambda_k$ of $\mathcal{T}^{(\tau)}$ has finite multiplicity and is isolated from the rest of the spectrum.*
+
+*Then, with probability tending to $1$ as $n \to \infty$:*
+
+$$
+\bigl|\lambda_k(\mathcal{T}^{(\tau)}_n) - \lambda_k(\mathcal{T}^{(\tau)})\bigr| \to 0,
+$$
+
+*and the corresponding eigenfunctions converge in $L^2(\rho)$:*
+
+$$
+\Bigl\|\, z_n^{(k)} - \phi^{(k)}\, \Bigr\|_{L^2(\rho)} \to 0,
+$$
+
+*where $z_n^{(k)}$ is the $k$-th eigenvector of $\mathcal{T}^{(\tau)}_n$
+extended to all of $\Omega$ by Nyström extension* (define
+$z_n^{(k)}(x) := \lambda_k^{-1} \mathcal{T}^{(\tau)}_n z_n^{(k)}(x)$),
+*and $\phi^{(k)}$ is the $k$-th eigenfunction of $\mathcal{T}^{(\tau)}$.*
+
+**Proof idea (1-paragraph).** vLBB show that $\mathcal{T}^{(\tau)}_n$
+converges to $\mathcal{T}^{(\tau)}$ in the **collectively compact**
+sense: a sequence of compact operators with images relatively compact
+and values converging to those of a limit operator on each point.
+Anselone (1971) and Chatelin (1983) proved that for collectively
+compact operator sequences, **the spectrum is continuous** —
+specifically, isolated eigenvalues with finite multiplicity persist
+under perturbation, and their eigenprojections converge in operator
+norm. vLBB verify the collectively compact assumption by a uniform
+law-of-large-numbers argument (Glivenko–Cantelli for the
+$\rho$-weighted integral against the kernel).
+
+**What (B) does not give.** (B) gives convergence of eigenfunctions of
+$\mathcal{T}^{(\tau)}_n$ to eigenfunctions of $\mathcal{T}^{(\tau)}$ —
+the *integral operator at fixed bandwidth* $\tau$, not yet to the
+*differential operator* $-\Delta_\rho$.
+
+#### Step (B′): Combine (A) + (B), let $\tau \to 0$
+
+The integral operator $\mathcal{T}^{(\tau)}$ is a smoothed version of
+the identity (it convolves with a Gaussian of width $\tau$). By (A)
+applied to the *population* operator (i.e., taking the same Taylor-
+expansion argument but with the deterministic integral instead of the
+empirical sum):
+
+$$
+\frac{1}{\tau^{d+2}}\bigl(\, \mathcal{T}^{(\tau)} - \rho \cdot \mathrm{Id}\,\bigr) f \;\xrightarrow[\tau \to 0]{}\; -c_d \cdot \rho \cdot \Delta_\rho f \quad \text{pointwise on } \Omega.
+$$
+
+This makes the *limit-as-$\tau$-vanishes* of the rescaled
+$\mathcal{T}^{(\tau)}$-eigenproblem be the eigenproblem of
+$-\Delta_\rho$ — a **differential operator** on $\Omega$. Combining
+(B) (eigenvector convergence at fixed $\tau$) with the bandwidth
+limit gives, for any fixed $k$, eigenvector convergence of the
+rescaled $L^{(\tau_n)}_n$ to eigenfunctions of $-\Delta_\rho$, **as
+long as $\tau_n \to 0$ slowly enough** that (B)'s collectively
+compact regime is maintained. The required rate is
+
+$$
+n \tau_n^{d_\mathcal{M} + 2} \to \infty,
+$$
+
+which appears as the bandwidth condition in Theorem 3′. Rates faster
+than this make the empirical operator too noisy; slower rates lose
+spatial resolution.
+
+#### Step (C): Identify the eigenfunctions on a Euclidean cube
+
+The weighted Laplace–Beltrami $\Delta_\rho$ on $\Omega = [0,1]^3$ with
+uniform $\rho$ reduces to the ordinary 3D Laplacian:
+
+$$
+\Delta_\rho \big|_{\rho \,=\, \mathrm{const}} \;=\; \Delta \;=\; \partial_x^2 + \partial_y^2 + \partial_z^2.
+$$
+
+The boundary conditions are **Neumann** (the kernel does not impose
+zero values at $\partial\Omega$, only zero normal derivative in the
+limit). The Neumann eigenproblem $-\Delta \phi = \lambda \phi$ on
+$[0,1]^3$ has eigenfunctions
+
+$$
+\phi_{(k_1, k_2, k_3)}(x, y, z) \;=\; \cos(k_1 \pi x)\, \cos(k_2 \pi y)\, \cos(k_3 \pi z), \qquad (k_1, k_2, k_3) \in \mathbb{Z}_{\geq 0}^3,
+$$
+
+with eigenvalue $\lambda_{(k_1, k_2, k_3)} = (k_1^2 + k_2^2 + k_3^2)\pi^2$.
+
+The smallest eigenvalue is $\lambda_0 = 0$ (constant mode). The
+**three** next-smallest eigenvalues are all $\lambda_1 = \pi^2$,
+forming a 3-dimensional eigenspace spanned by
+
+$$
+\cos(\pi x), \quad \cos(\pi y), \quad \cos(\pi z).
+$$
+
+These three modes are **monotone bijections** of the coordinate
+functions $x, y, z$ on the unit interval (since $\cos$ is monotone
+on $[0, \pi]$). After PCA on the data $(\phi^{(1)}(x_i),
+\phi^{(2)}(x_i), \phi^{(3)}(x_i))$ — where the $\{x_i\}$ are i.i.d.
+uniform on $[0, 1]^3$ — the recovered top-3 PCs span the affine
+subspace of linear functions of the centered coordinates $x - 0.5,
+y - 0.5, z - 0.5$, up to a rotation/reflection of axes.
+
+**Concretely**: the principal components recover **Cartesian
+coordinates up to a smooth, monotone reparameterization of each
+axis** (the cosine reparametrization). For practical purposes — e.g.,
+predicting "front-left vs back-right" — this distinction is invisible:
+the answer depends on *signs* of differences in coordinates, which
+the cosine reparametrization preserves.
+
+#### Combining (A) + (B) + (C): the precise statement
+
+Putting the three steps together, with high probability over the
+i.i.d. sample:
+
+$$
+z_n^{(k+1)}(x_i) \;\xrightarrow[n \to \infty]{}\; \rho(x_i)^{-1/2}\, \phi^{(k)}(x_i)\quad \text{uniformly in } i \in [n],
+$$
+
+where $\phi^{(k)}$ is the $k$-th non-constant eigenfunction of
+$-\Delta_\rho$ on $\Omega$. The $\rho^{-1/2}$ factor comes from the
+weighted-Laplace–Beltrami normalization; for uniform $\rho$ it is
+constant and disappears. The conclusion of Theorem 3′ follows.
+
+#### Why the proof is non-trivial
+
+A reader unfamiliar with this literature might guess that pointwise
+operator convergence (A) is "obviously enough" to get eigenvector
+convergence. It isn't:
+
+- A bounded sequence $T_n \to T_\infty$ pointwise can have eigenvalues
+  $\lambda_k(T_n)$ that don't converge (they can escape to infinity
+  or merge with other eigenvalues).
+- A bounded sequence $T_n \to T_\infty$ in operator norm with
+  unbounded spectrum can still have eigenfunctions that don't converge
+  in any reasonable function-space norm.
+
+The vLBB result threads the needle: *collectively compact
+convergence* + *isolated eigenvalues* together imply spectral
+convergence with quantitative control. This is the substantive
+contribution of (B), and it is the reason Theorem 3′ holds with the
+specific rate $n\tau^{d+2} \to \infty$ rather than some weaker
+condition.
+
+#### Summary
+
+Theorem 3′ stitches together three pieces of mathematics from
+distinct sources, only one of which (the spectral perturbation
+result of vLBB 2008) is the substantive "deep" ingredient. The
+overall structure:
+
+> *(Belkin–Niyogi 2003 pointwise) + (vLBB 2008 spectral) + (PDE on cube) = Theorem 3′.*
+
+Each piece is well-established in its own literature; what is novel
+in our manuscript is the *application* — recognizing that the right
+construction for vision is a kernel on 3D world coordinates rather
+than a kernel on token similarities, and combining the three pieces
+to derive a statement about world-coordinate recovery in PCA of a
+VLM's residual stream.
 
 ---
 

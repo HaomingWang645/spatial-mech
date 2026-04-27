@@ -24,7 +24,8 @@
    - 7.5 Necessity: when the loss does not help
 8. Empirical-to-theoretical map
 9. **NEW: Paper-writing notes — why this proof matters and where to place it**
-10. References
+10. **NEW: Contribution beyond Park et al. (ICLR 2025) — explicit mathematical comparison**
+11. References
 
 ---
 
@@ -718,7 +719,193 @@ contribution.
 
 ---
 
-## 10. References
+## 10. Contribution beyond Park et al. (ICLR 2025) — explicit mathematical comparison
+
+The closest prior work is Park et al., *Disentangling representations
+of in-context learning via principal components* (ICLR 2025), whose
+Theorem B.1 is the algebraic core our Theorem 3 inherits. This section
+makes the comparison explicit at the level of the math, so a reviewer
+can see precisely where our contribution lies.
+
+### 10.1. Park et al.'s setup, in our notation
+
+Park et al. consider a **discrete token graph** $G = (V, E)$ with $V =
+[n]$, where each vertex is a token in an in-context-learning context.
+The edge weights are given by some explicit matrix
+
+$$
+W^{(P)} \in \mathbb{R}_{\geq 0}^{n \times n}, \qquad W^{(P)}_{ij} = \omega(\text{token}_i, \text{token}_j),
+$$
+
+where $\omega$ is a similarity function — typically attention scores or
+an explicit semantic-similarity metric on the token sequence.
+The associated unnormalized Laplacian is
+
+$$
+L^{(P)} \;=\; D^{(P)} - W^{(P)}, \qquad D^{(P)}_{ii} = \sum_j W^{(P)}_{ij}.
+$$
+
+**Park et al., Theorem B.1.** *Fix $\epsilon_1 > \cdots > \epsilon_s > 0$.
+Let $H^* = \arg\min_H \mathrm{tr}(H^\top L^{(P)} H)$ subject to
+$\sigma_k(H) \geq \epsilon_k$. Then $u_k(H^*) = z^{(P,k)}$, the $k$-th
+smallest eigenvector of $L^{(P)}$, for all $k \leq s$.*
+
+This is purely algebraic. The proof uses the SVD decomposition,
+constraint saturation, and the Ky Fan inequality — exactly the four
+steps we reproduce in §5.
+
+### 10.2. Our setup, side-by-side
+
+We replace Park's discrete adjacency with a **continuous kernel
+applied to coordinates**:
+
+$$
+W_{ij} \;=\; \kappa(x_i, x_j), \qquad x_i \in \mathbb{R}^3,\; \kappa(x, y) = e^{-\|x - y\|^2 / 2\tau^2}.
+$$
+
+Everything downstream — $D$, $L$, the energy
+$\mathcal{E}_X(H) = \mathrm{tr}(H^\top L H)$, the constraints — is
+formally identical to Park's setup. So the algebraic theorem
+*automatically applies* to our $L$:
+
+$$
+\boxed{\;\;\text{Park's Thm. B.1 is true for any PSD Laplacian} \implies \text{our Theorem 3 (algebra) is free.}\;\;}
+$$
+
+The mathematical question then becomes: *what does the change in
+where* $L$ *comes from buy us?*
+
+### 10.3. The new content: Theorem 3′ (a continuous limit Park doesn't have)
+
+The decisive difference is that our $W$ depends on a *bandwidth* $\tau$
+controlling kernel locality, and we can take $n \to \infty,\; \tau \to 0$.
+
+**Theorem 3′ (formal).** *Let $\{x_i\}_{i=1}^n$ be i.i.d. samples from
+a smooth density $\rho$ on a compact Riemannian submanifold $\mathcal{M}
+\subset \mathbb{R}^D$ of intrinsic dimension $d_\mathcal{M}$. Let
+$L^{(\tau)}$ be built from the Gaussian kernel above with $\tau =
+\tau_n$ satisfying $\tau_n \to 0$ and $n \tau_n^{d_\mathcal{M} + 2}
+\to \infty$. Then for any fixed $f \in C^2(\mathcal{M})$,*
+
+$$
+\frac{2}{n\,\tau_n^{d_\mathcal{M} + 2}}\, L^{(\tau_n)} f(x_i) \;\xrightarrow[n \to \infty]{\text{a.s.}}\; -\Delta_{\mathcal{M}, \rho}\, f(x_i) \quad \text{uniformly in } i,
+$$
+
+*where $\Delta_{\mathcal{M}, \rho} = \rho^{-1}\,\mathrm{div}(\rho\,\nabla\,\cdot)$
+is the weighted Laplace–Beltrami operator on $\mathcal{M}$.
+Consequently, the $k$-th eigenvector $z^{(k)}_n$ of $L^{(\tau_n)}$
+satisfies $z^{(k)}_n(x_i) \to \rho(x_i)^{-1/2} \phi^{(k)}(x_i)$ uniformly,
+where $\phi^{(k)}$ is the $k$-th non-constant eigenfunction of
+$\Delta_{\mathcal{M}, \rho}$.*
+
+(Proof: spectral perturbation of compact integral operators —
+Belkin & Niyogi 2003, von Luxburg-Belkin-Bousquet 2008.)
+
+**Why Park has no analog.** Park's $L^{(P)}$ is built from a *fixed*
+adjacency matrix on a *fixed* finite token set. There is no parameter
+to take to a limit. Their theorem is finite-dimensional and stays
+finite-dimensional. Our theorem makes a statement about an
+**infinite-dimensional limit object** (a differential operator) whose
+eigenfunctions can be analytically identified. This is the
+substantive mathematical contribution.
+
+**Concrete payoff.** When $\mathcal{M} = [0, 1]^3$ with uniform $\rho$,
+
+$$
+\Delta f \;=\; \partial_x^2 f + \partial_y^2 f + \partial_z^2 f
+$$
+
+(the ordinary 3D Laplacian), and the first three non-constant
+eigenfunctions on a cube are *exactly* the centered coordinates:
+
+$$
+\phi^{(1)}(x, y, z) \;=\; x - \tfrac{1}{2}, \quad \phi^{(2)} = y - \tfrac{1}{2}, \quad \phi^{(3)} = z - \tfrac{1}{2}, \quad \text{(up to rotation/reflection of axes).}
+$$
+
+Combining Theorem 3 (algebra) with Theorem 3′ (continuous limit), we
+obtain:
+
+$$
+\boxed{\;\mathrm{PC}_k(H^*)(x_i) \;\xrightarrow[n \to \infty]{\text{a.s.}}\; \rho(x_i)^{-1/2}\,\phi^{(k+1)}(x_i),\qquad \text{i.e., the world-coordinate functions } x, y, z.\;}
+$$
+
+This is what makes our theorem **physically meaningful for vision**.
+Park's $z^{(P, k)}$ are abstract graph eigenvectors with no a priori
+interpretation; our $z^{(k)}$ converge (in this precise spectral
+sense) to **world coordinates**.
+
+### 10.4. The new content: Theorems 5–7 (training-time guarantees)
+
+Park et al. prove a statement about the *minimizer of the loss in
+representation space*. They do not connect this to **downstream task
+performance**. Theorems 5, 6, 7 (§7 of this document) close that gap:
+
+- **Theorem 5 (sample complexity).** ERM on a linear-readout class
+  $\{w^\top h : w \in \mathbb{R}^d\}$ trained on $H^*$ has
+  generalization error scaling with the *task-relevant subspace
+  dimension*, not the ambient dim:
+
+  $$
+  \mathbb{E}\bigl[(\widehat w_n^\top h - w^{\star\top} h)^2\bigr] \;\leq\; \frac{C\,\sigma_\xi^2 \cdot k^\star}{n} \log(1/\delta),
+  $$
+
+  where $k^\star \leq 3$ is the dimension of the task-relevant
+  subspace (= world-coord subspace) and the unstructured baseline
+  has $d$ in place of $k^\star$.
+
+- **Theorem 6 (realizability).** Any function $f: \mathbb{R}^3 \to \mathbb{R}$
+  that depends only on world coordinates is *realizable* by a linear
+  readout on $H^*$ in the limit:
+
+  $$
+  \forall \eta > 0,\; \exists \ell \in (\mathbb{R}^d)^*: \;\sup_i |\ell(h_i^*) - f(x_i)| < \eta \quad \text{w.h.p. as } n \to \infty.
+  $$
+
+- **Theorem 7 (training-time decomposition).** Adding $\lambda \mathcal{R}_X$
+  to the LM loss reduces population spatial-task risk by
+
+  $$
+  R_{\text{spatial}}(\theta_\lambda^\star) \;\leq\; R_{\text{spatial}}(\theta^\star) - \lambda \beta\,\bigl(\mathcal{R}_X(H_{\theta^\star}) - \mathcal{R}_X^*\bigr) + O(\lambda^2),
+  $$
+
+  with $\beta > 0$ iff $\nabla R_{\text{spatial}}$ correlates with
+  $\nabla \mathcal{R}_X$ in $\theta$-space.
+
+None of these statements has a counterpart in Park et al. They are
+*specific to* the continuous-geometry setting where the residual
+stream encodes a 3D structure that downstream tasks (spatial VQA)
+need to read out.
+
+### 10.5. Side-by-side summary
+
+| | Park et al. (ICLR 2025) | This work |
+|---|---|---|
+| Source of $L$ | discrete graph $W^{(P)}_{ij}$ from token-token similarity | continuous kernel $W_{ij} = \kappa(x_i, x_j)$ |
+| Domain | LM token sequences (ICL contexts) | VLM object-token activations on 3D scenes |
+| **Algebraic theorem** | Thm. B.1: PCs of $H^*$ = $L^{(P)}$ eigenvectors | Theorem 3 (identical algebra) |
+| **Continuous limit** | n/a (graph is the data) | **Theorem 3′ (Belkin–Niyogi):** PCs converge to world coordinates $x, y, z$ |
+| **Downstream task analysis** | none | **Theorems 5, 6, 7:** sample complexity, realizability, training-time risk decomposition |
+| **Empirical signature** | abstract graph eigenvectors | concrete: 3D-alignment $R^2$ rises from 0.69 to 0.90 ($p < 10^{-6}$) |
+
+### 10.6. The honest framing for the paper
+
+Following the §9.4 list of *what not to do*, we should be careful to
+attribute Theorem 3 (the algebra) to Park et al.:
+
+> *"The algebraic core of Theorem 3 is identical to Park et al.
+> (ICLR 2025), Theorem B.1, applied to our continuous-geometry
+> Laplacian. Our contribution is the continuous-kernel construction
+> and the consequent kernel-limit theorem (Theorem 3′), together
+> with the downstream-task guarantees of Theorems 5, 6, 7."*
+
+This is the cleanest framing. The reviewer immediately sees what is
+new (the bridge to vision via continuous geometry, and the
+training-time guarantees) without us having to oversell the linear
+algebra (which is identical to Park's).
+
+---
+
+## 11. References
 
 - Belkin, M., & Niyogi, P. (2003). *Laplacian eigenmaps for dimensionality reduction and data representation*. Neural Computation 15(6), 1373–1396.
 - Bhatia, R. (1997). *Matrix Analysis*. Graduate Texts in Mathematics 169. Springer.

@@ -220,25 +220,21 @@ single-cell improvement in the entire residualized study and was
 hidden in §3's overall-only summary (which showed +4.6pp at λ=0.3 for
 VSI MC, masking the much bigger per-task effect).
 
-### 5c. InternVL full-bench — partial (7/8 evals done)
+### 5c. InternVL full-bench — final (n=2 seeds, all 8 evals complete)
 
-7/8 InternVL residualized full-bench evals are complete. The 8th
-(`intern_lam3.0_seed0`) is still running and has been waiting for a
-free GPU. Cells marked `*` are single-seed partial results.
-
-| Task (n) | base | NR λ=0 | **R λ=0** | NR λ=0.3 | R λ=0.3 | NR λ=1 | R λ=1 | NR λ=3 | R λ=3* |
+| Task (n) | base | NR λ=0 | **R λ=0** | NR λ=0.3 | R λ=0.3 | NR λ=1 | R λ=1 | NR λ=3 | R λ=3 |
 |---|---|---|---|---|---|---|---|---|---|
-| **OVERALL** (5130) | 0.315 | 0.374 | **0.415** | 0.412 | 0.378 | 0.398 | 0.391 | 0.408 | 0.388* |
-| obj_appearance_order (618) | 0.367 | 0.341 | 0.333 | 0.371 | 0.359 | 0.341 | 0.282 | 0.246 | 0.248* |
-| object_abs_distance (834)¹ | 0.464 | 0.785 | **0.885** | 0.970 | 0.763 | 0.879 | 0.894 | 0.972 | 0.872* |
-| object_counting (565) | 0.039 | 0.140 | **0.233** | 0.129 | 0.117 | 0.113 | 0.157 | 0.115 | 0.196* |
-| object_rel_direction_easy (217) | 0.512 | 0.512 | 0.484 | 0.498 | 0.505 | 0.507 | 0.500 | 0.516 | 0.498* |
-| **object_rel_direction_hard** (373) | 0.231 | 0.228 | **0.310** | 0.225 | 0.275 | 0.252 | **0.284** | 0.268 | **0.290*** |
-| object_rel_direction_medium (378) | 0.331 | 0.349 | 0.294 | 0.312 | 0.332 | 0.325 | 0.288 | 0.317 | 0.339* |
-| object_rel_distance (710) | 0.285 | 0.258 | 0.268 | 0.254 | 0.283 | 0.268 | 0.259 | 0.259 | 0.255* |
-| object_size_estimation (953)¹ | 0.307 | 0.277 | 0.300 | 0.302 | 0.298 | 0.319 | 0.298 | 0.295 | 0.279* |
-| **room_size_estimation** (288)¹ | 0.326 | 0.476 | **0.620** | 0.556 | 0.439 | 0.517 | 0.498 | 0.701 | 0.486* |
-| route_planning (194) | 0.345 | 0.330 | 0.343 | 0.335 | 0.330 | 0.335 | 0.320 | 0.345 | 0.345* |
+| **OVERALL** (5130) | 0.315 | 0.374 | **0.415** | 0.412 | 0.378 | 0.398 | 0.391 | 0.408 | 0.399 |
+| obj_appearance_order (618) | 0.367 | 0.341 | 0.333 | 0.371 | 0.359 | 0.341 | 0.282 | 0.246 | 0.250 |
+| object_abs_distance (834)¹ | 0.464 | 0.785 | **0.885** | 0.970 | 0.763 | 0.879 | 0.894 | 0.972 | 0.928 |
+| object_counting (565) | 0.039 | 0.140 | **0.233** | 0.129 | 0.117 | 0.113 | 0.157 | 0.115 | 0.150 |
+| object_rel_direction_easy (217) | 0.512 | 0.512 | 0.484 | 0.498 | 0.505 | 0.507 | 0.500 | 0.516 | 0.507 |
+| **object_rel_direction_hard** (373) | 0.231 | 0.228 | **0.310** | 0.225 | 0.275 | 0.252 | **0.284** | 0.268 | **0.279** |
+| object_rel_direction_medium (378) | 0.331 | 0.349 | 0.294 | 0.312 | 0.332 | 0.325 | 0.288 | 0.317 | 0.294 |
+| object_rel_distance (710) | 0.285 | 0.258 | 0.268 | 0.254 | 0.283 | 0.268 | 0.259 | 0.259 | 0.258 |
+| object_size_estimation (953)¹ | 0.307 | 0.277 | 0.300 | 0.302 | 0.298 | 0.319 | 0.298 | 0.295 | 0.291 |
+| **room_size_estimation** (288)¹ | 0.326 | 0.476 | **0.620** | 0.556 | 0.439 | 0.517 | 0.498 | 0.701 | 0.625 |
+| route_planning (194) | 0.345 | 0.330 | 0.343 | 0.335 | 0.330 | 0.335 | 0.320 | 0.345 | 0.358 |
 
 ¹ Numeric task — see REPORT_v10 for the MRA caveat. The high
 distractor-ranking accuracies (e.g., `abs_distance` ≥ 0.88) likely
@@ -261,14 +257,14 @@ is still informative because both sides are equally inflated.
    opposite sign from λ=0. The asymmetry between λ=0 and λ=0.3 is too
    large to be seed noise (n=2 per cell, std ≈ 0.05 typical).
 3. **`room_size_estimation`** swings wildly: +14.4pp at λ=0,
-   −11.7pp at λ=0.3, −1.9pp at λ=1, −21.5pp at λ=3. This is a strong
-   indication that residualization has a *task-specific*, possibly
-   *unstable* effect on InternVL and may be sensitive to the basis $W$
-   chosen.
+   −11.7pp at λ=0.3, −1.9pp at λ=1, −7.6pp at λ=3 (final, n=2). This
+   is a strong indication that residualization has a *task-specific*,
+   possibly *unstable* effect on InternVL and may be sensitive to the
+   basis $W$ chosen.
 4. **`object_rel_direction_hard`** is the most consistent winner with
    residualization: **+8.2pp at λ=0**, +5.0pp at λ=0.3, +3.2pp at λ=1,
-   +2.2pp at λ=3. This is a direction-axis task, matching theoretical
-   expectations.
+   +1.1pp at λ=3 (final, n=2). This is a direction-axis task, matching
+   theoretical expectations.
 5. **`obj_appearance_order`** continues to lose with residualization at
    λ=1 (-5.9pp), consistent with v8's finding that this chronological
    task gets *worse* on InternVL with Dirichlet — and residualization

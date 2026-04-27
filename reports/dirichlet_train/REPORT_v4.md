@@ -31,13 +31,25 @@ p<10⁻⁶), but the downstream effect on real-world spatial VQA is
 
 | Quantity (Qwen, n=4 common seeds) | **base** (no LoRA) | λ=0 | λ=0.3 | λ=1.0 | λ=3.0 |
 |---|---|---|---|---|---|
-| Dirichlet ratio @ L17 | TBD¹ | 0.231 | — | 0.121 | even lower |
-| 3D-alignment R² @ L17 | TBD¹ | 0.690 | — | 0.897 | even higher |
+| Dirichlet ratio @ L17 (τ=2.0)¹ | **0.233** | 0.231 | — | 0.121 | even lower |
+| 3D-alignment R² @ L17¹ | **0.655** | 0.690 | — | 0.897 | even higher |
 | **rel_direction_medium** (3D axis test) | **19.5%** | 34.1% | 29.9% | 45.7% | **47.0%** |
 | **rel_distance** (depth shortcut) | **28.6%** | 32.1% | 21.4% | 17.9% | **14.3%** |
 | Overall MC accuracy | **28.0%** | 36.4% | 33.0% | 37.9% | **39.0%** |
 
-¹ Base-model activation extraction is queued (not yet run); these geometric values will be filled in once `reports/probe_features/qwen_base.npz` is produced.
+¹ Geometric values for `base` measured on `reports/probe_features/qwen_base.npz` (33 ARKitScenes scenes, ≥4 objects each). The two finetuning conditions in this column band tell a striking story:
+
+- **Base → λ=0 (LM-only LoRA)**: geometry essentially **unchanged**
+  (Dirichlet ratio 0.233 → 0.231; alignment R² 0.655 → 0.690). LoRA on
+  Free6DoF without the Dirichlet penalty does *not* reshape the residual
+  stream at L17 — the +8.4pp overall MC gain at λ=0 vs base must come
+  from LM-head spatial vocabulary learning, not residual-stream geometry.
+- **λ=0 → λ=1.0 (adding the Dirichlet penalty)**: this is where
+  the geometric reshaping actually happens (ratio 0.231 → 0.121,
+  R² 0.690 → 0.897). The Dirichlet loss is the *only* source of the
+  Theorem-3-predicted geometry change.
+
+Equivalent values for InternVL3-8B base: Dirichlet ratio 0.234, alignment R² 0.666 — base geometry is essentially identical to Qwen, despite InternVL's different pretraining pipeline.
 
 Direction reasoning is **monotone increasing** in λ for λ≥1.
 Distance reasoning is **monotone decreasing** in λ.

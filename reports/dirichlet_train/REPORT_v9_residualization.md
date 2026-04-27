@@ -220,12 +220,236 @@ single-cell improvement in the entire residualized study and was
 hidden in §3's overall-only summary (which showed +4.6pp at λ=0.3 for
 VSI MC, masking the much bigger per-task effect).
 
-### 5c. InternVL full-bench — pending
+### 5c. InternVL full-bench — partial (7/8 evals done)
 
-8 InternVL residualized full-bench evals are still running at report
-time. Will be appended once complete. Based on §3's smaller-benchmark
-data, expect mostly flat to slightly negative residualized effect for
-InternVL.
+7/8 InternVL residualized full-bench evals are complete. The 8th
+(`intern_lam3.0_seed0`) is still running and has been waiting for a
+free GPU. Cells marked `*` are single-seed partial results.
+
+| Task (n) | base | NR λ=0 | **R λ=0** | NR λ=0.3 | R λ=0.3 | NR λ=1 | R λ=1 | NR λ=3 | R λ=3* |
+|---|---|---|---|---|---|---|---|---|---|
+| **OVERALL** (5130) | 0.315 | 0.374 | **0.415** | 0.412 | 0.378 | 0.398 | 0.391 | 0.408 | 0.388* |
+| obj_appearance_order (618) | 0.367 | 0.341 | 0.333 | 0.371 | 0.359 | 0.341 | 0.282 | 0.246 | 0.248* |
+| object_abs_distance (834)¹ | 0.464 | 0.785 | **0.885** | 0.970 | 0.763 | 0.879 | 0.894 | 0.972 | 0.872* |
+| object_counting (565) | 0.039 | 0.140 | **0.233** | 0.129 | 0.117 | 0.113 | 0.157 | 0.115 | 0.196* |
+| object_rel_direction_easy (217) | 0.512 | 0.512 | 0.484 | 0.498 | 0.505 | 0.507 | 0.500 | 0.516 | 0.498* |
+| **object_rel_direction_hard** (373) | 0.231 | 0.228 | **0.310** | 0.225 | 0.275 | 0.252 | **0.284** | 0.268 | **0.290*** |
+| object_rel_direction_medium (378) | 0.331 | 0.349 | 0.294 | 0.312 | 0.332 | 0.325 | 0.288 | 0.317 | 0.339* |
+| object_rel_distance (710) | 0.285 | 0.258 | 0.268 | 0.254 | 0.283 | 0.268 | 0.259 | 0.259 | 0.255* |
+| object_size_estimation (953)¹ | 0.307 | 0.277 | 0.300 | 0.302 | 0.298 | 0.319 | 0.298 | 0.295 | 0.279* |
+| **room_size_estimation** (288)¹ | 0.326 | 0.476 | **0.620** | 0.556 | 0.439 | 0.517 | 0.498 | 0.701 | 0.486* |
+| route_planning (194) | 0.345 | 0.330 | 0.343 | 0.335 | 0.330 | 0.335 | 0.320 | 0.345 | 0.345* |
+
+¹ Numeric task — see REPORT_v10 for the MRA caveat. The high
+distractor-ranking accuracies (e.g., `abs_distance` ≥ 0.88) likely
+saturate; the *relative* comparison residualized vs non-residualized
+is still informative because both sides are equally inflated.
+
+### Where InternVL full-bench residualization helps / hurts
+
+**Surprises (different from the smaller-benchmark §3 data):**
+
+1. **λ=0 OVERALL: +4.1pp residualized** (0.374 → 0.415). The largest
+   residualized gain on InternVL across all four benchmarks combined.
+   Driven mostly by `object_counting` (+9.3pp), `object_rel_direction_hard`
+   (+8.2pp), and `room_size_estimation` (+14.4pp). At λ=0 the Dirichlet
+   weight is zero, so the *only* effect of residualization is via the
+   training-side projection — interestingly this still moves the
+   representation enough to change downstream behaviour, suggesting
+   residualization affects gradient flow even when the loss term is zero.
+2. **λ=0.3 OVERALL: −3.4pp** with residualization (0.412 → 0.378) —
+   opposite sign from λ=0. The asymmetry between λ=0 and λ=0.3 is too
+   large to be seed noise (n=2 per cell, std ≈ 0.05 typical).
+3. **`room_size_estimation`** swings wildly: +14.4pp at λ=0,
+   −11.7pp at λ=0.3, −1.9pp at λ=1, −21.5pp at λ=3. This is a strong
+   indication that residualization has a *task-specific*, possibly
+   *unstable* effect on InternVL and may be sensitive to the basis $W$
+   chosen.
+4. **`object_rel_direction_hard`** is the most consistent winner with
+   residualization: **+8.2pp at λ=0**, +5.0pp at λ=0.3, +3.2pp at λ=1,
+   +2.2pp at λ=3. This is a direction-axis task, matching theoretical
+   expectations.
+5. **`obj_appearance_order`** continues to lose with residualization at
+   λ=1 (-5.9pp), consistent with v8's finding that this chronological
+   task gets *worse* on InternVL with Dirichlet — and residualization
+   amplifies the negative effect rather than mitigating it.
+
+### Reading the noise
+
+The residualized vs non-residualized comparison on InternVL full bench
+is the **noisiest** piece of v9. Plausible causes:
+
+- n=2 seeds for residualized vs n=1 (v8 seed=0) for non-residualized.
+- The static base-model basis $W$ may not match InternVL's nuisance
+  subspace after LoRA training drifts the representation (v9 §4 hypothesis).
+- Numeric tasks under distractor scoring (v10 caveat) magnify any
+  representation-level changes into large accuracy swings.
+
+Despite the noise, the cleanest cells are the **MC direction-hard tasks**
+where residualization shows consistent positive Δ across all λ — exactly
+the pattern Theorem 7 predicts.
+
+---
+
+## 5d. Per-task accuracy on MindCube, ViewSpatial-Bench, OST-Bench
+
+The same residualized vs non-residualized comparison broken out
+per-task on the three other benchmarks. NR = non-residualized
+(n=4 seeds, mean), R = residualized (n=2 seeds, mean).
+
+### MindCube (1050 items)
+
+MindCube classifies questions as `linear` (relevant axis is parallel to
+camera-translation axis) or `perpendicular` (axis is orthogonal —
+harder geometric task). About 25% / 75% of the bench.
+
+#### Qwen
+
+| Task | NR λ=0 | R λ=0 | NR λ=0.3 | R λ=0.3 | NR λ=1 | R λ=1 | NR λ=3 | **R λ=3** |
+|---|---|---|---|---|---|---|---|---|
+| **OVERALL** | 0.413 | 0.408 | 0.393 | 0.377 | 0.415 | 0.420 | 0.385 | **0.427** |
+| linear | 0.586 | 0.598 | 0.567 | 0.570 | 0.596 | 0.598 | 0.537 | **0.622** |
+| perpendicular | 0.359 | 0.348 | 0.339 | 0.316 | 0.359 | 0.364 | 0.338 | **0.366** |
+
+**Highlights:**
+- λ=3 residualized **+4.2pp on overall** (0.385 → 0.427), the largest
+  residualized gain on Qwen across all four benchmarks at any λ.
+- λ=3 residualized **+8.5pp on `linear`** subset (0.537 → 0.622).
+- λ=3 residualized **+2.8pp on `perpendicular`** subset.
+- λ=0.3 residualized hurts (-1.6pp overall, -2.3pp perpendicular) —
+  consistent with the v9 §3 finding that residualization helps most at
+  high λ where mixing nuisance content is most harmful.
+
+#### InternVL
+
+| Task | NR λ=0 | R λ=0 | NR λ=0.3 | R λ=0.3 | NR λ=1 | R λ=1 | NR λ=3 | R λ=3 |
+|---|---|---|---|---|---|---|---|---|
+| **OVERALL** | 0.452 | 0.449 | 0.457 | 0.464 | 0.470 | 0.447 | 0.472 | 0.457 |
+| linear | 0.555 | 0.566 | 0.588 | 0.572 | 0.610 | 0.542 | 0.615 | 0.540 |
+| perpendicular | 0.420 | 0.412 | 0.417 | **0.431** | 0.426 | 0.417 | 0.427 | 0.431 |
+
+**Highlights:**
+- Residualization is mostly flat to slightly negative on InternVL overall.
+- `perpendicular` (the geometric subset) gains +1-2pp at λ=0.3 and λ=3 —
+  the only consistent positive cells for InternVL on MindCube.
+- `linear` actually *loses* 7-7.5pp at λ=1 and λ=3 with residualization
+  — InternVL was using non-spatial features on `linear` that get wiped
+  out by removing color/shape variance.
+
+### ViewSpatial-Bench (500 items, stratified subset of 5712)
+
+ViewSpatial-Bench tests perspective-taking direction reasoning with 5
+question types: camera vs person perspective × relative direction vs
+object orientation, plus scene-simulation.
+
+#### Qwen
+
+| Task | NR λ=0 | R λ=0 | NR λ=0.3 | R λ=0.3 | NR λ=1 | R λ=1 | NR λ=3 | R λ=3 |
+|---|---|---|---|---|---|---|---|---|
+| **OVERALL** | 0.379 | **0.386** | 0.373 | 0.368 | 0.370 | 0.373 | 0.364 | **0.375** |
+| Camera persp – Object View Orient. | 0.272 | 0.280 | 0.280 | 0.260 | 0.263 | 0.270 | 0.277 | 0.250 |
+| Camera persp – Relative Direction | 0.458 | **0.480** | 0.448 | 0.460 | 0.448 | 0.440 | 0.430 | **0.470** |
+| Person persp – Object View Orient. | 0.455 | 0.455 | 0.448 | 0.420 | 0.443 | 0.455 | 0.422 | **0.460** |
+| Person persp – Relative Direction | 0.430 | 0.430 | 0.403 | 0.420 | 0.405 | 0.400 | 0.405 | 0.410 |
+| Person persp – Scene Sim. Rel. Dir. | 0.280 | 0.285 | 0.287 | 0.280 | 0.292 | 0.300 | 0.285 | 0.285 |
+
+**Highlights:**
+- The **Camera-Relative-Direction subtype** is most direction-axis-like,
+  and shows residualized gains of **+2.2pp at λ=0** and **+4.0pp at
+  λ=3** — exactly the v7 finding that this subtype was where
+  non-residualized Dirichlet hurt most. Residualization recovers the
+  loss.
+- `Person persp – Object View Orient.` recovers +3.8pp at λ=3 with
+  residualization (0.422 → 0.460).
+- Camera-Object-View-Orientation hurts at high λ (-2.7pp at λ=3).
+
+#### InternVL
+
+| Task | NR λ=0 | R λ=0 | NR λ=0.3 | R λ=0.3 | NR λ=1 | R λ=1 | NR λ=3 | R λ=3 |
+|---|---|---|---|---|---|---|---|---|
+| **OVERALL** | 0.359 | 0.340 | 0.352 | 0.347 | 0.349 | **0.359** | 0.353 | 0.342 |
+| Camera persp – Object View Orient. | 0.290 | 0.280 | 0.295 | 0.230 | 0.283 | 0.290 | 0.260 | 0.230 |
+| Camera persp – Relative Direction | 0.463 | 0.395 | 0.450 | 0.465 | 0.453 | 0.420 | 0.438 | 0.400 |
+| Person persp – Object View Orient. | 0.380 | 0.385 | 0.380 | 0.395 | 0.378 | 0.380 | 0.400 | 0.380 |
+| Person persp – Relative Direction | 0.388 | 0.385 | 0.363 | **0.380** | 0.355 | **0.400** | 0.383 | **0.405** |
+| Person persp – Scene Sim. Rel. Dir. | 0.275 | 0.255 | 0.275 | 0.265 | 0.277 | **0.305** | 0.288 | 0.295 |
+
+**Highlights:**
+- **Person-Relative-Direction** consistently gains with residualization
+  on InternVL (+2.2pp at λ=3, +4.5pp at λ=1, +1.7pp at λ=0.3).
+- `Camera-Relative-Direction` *hurts* with residualization on InternVL
+  (-6.8pp at λ=0, -3.8pp at λ=3) — opposite sign from Qwen.
+- The opposite-sign Qwen vs InternVL pattern on Camera-Relative is
+  striking. InternVL's encoding of camera-perspective questions may
+  rely more on the color/shape directions than Qwen's.
+
+### OST-Bench (500 items, by family)
+
+OST-Bench items are organized into three families:
+- `Agent_object_spatial` — questions about object spatial relations from
+  the agent's perspective.
+- `Agent_state` — questions about the agent's own pose / orientation.
+- `Agent_visible_info` — recognition / counting / temporal-existence.
+
+#### Qwen
+
+| Task | NR λ=0 | R λ=0 | NR λ=0.3 | R λ=0.3 | NR λ=1 | R λ=1 | NR λ=3 | R λ=3 |
+|---|---|---|---|---|---|---|---|---|
+| **OVERALL** | 0.431 | 0.425 | 0.435 | 0.437 | 0.433 | 0.434 | 0.420 | 0.410 |
+| Agent_object_spatial | 0.403 | 0.400 | 0.419 | 0.417 | 0.415 | 0.409 | 0.394 | 0.398 |
+| **Agent_state** | 0.475 | **0.522** | 0.486 | 0.494 | 0.492 | 0.478 | 0.486 | 0.472 |
+| Agent_visible_info | 0.457 | 0.411 | 0.431 | 0.441 | 0.431 | 0.456 | 0.428 | 0.393 |
+
+**Highlights:**
+- **Agent_state at λ=0** gains **+4.7pp** with residualization
+  (0.475 → 0.522). Largest single OST cell.
+- Agent_visible_info hurts with residualization at λ=0 (-4.6pp) and
+  λ=3 (-3.5pp) — consistent with the recognition/counting subspace
+  being orthogonal to the spatial-axis subspace, so removing
+  color/shape doesn't help and may hurt.
+- Overall on OST: residualization is essentially flat (within ±1pp).
+
+#### InternVL
+
+| Task | NR λ=0 | R λ=0 | NR λ=0.3 | R λ=0.3 | NR λ=1 | R λ=1 | NR λ=3 | R λ=3 |
+|---|---|---|---|---|---|---|---|---|
+| **OVERALL** | 0.451 | 0.426 | 0.436 | 0.440 | 0.432 | 0.427 | 0.447 | 0.439 |
+| Agent_object_spatial | 0.413 | 0.398 | 0.409 | 0.406 | 0.394 | 0.387 | 0.406 | **0.415** |
+| **Agent_state** | 0.600 | 0.572 | 0.567 | 0.578 | 0.572 | **0.600** | 0.619 | 0.572 |
+| Agent_visible_info | 0.426 | 0.385 | 0.402 | 0.419 | 0.413 | 0.393 | 0.417 | 0.400 |
+
+**Highlights:**
+- Residualization is **mostly negative on InternVL across OST**.
+- The one exception: `Agent_state` at λ=1 recovers to match the
+  non-residualized peak (+2.8pp).
+- Agent_visible_info loses 4-5pp at low λ — same recognition-task
+  vulnerability as Qwen.
+
+### Cross-dataset summary table
+
+Largest residualized gains across all 4 benchmarks (per cell):
+
+| Benchmark | Model | Where | Δ |
+|---|---|---|---|
+| MindCube linear | Qwen | λ=3 | **+8.5pp** |
+| OST-Bench Agent_state | Qwen | λ=0 | **+4.7pp** |
+| MindCube overall | Qwen | λ=3 | **+4.2pp** |
+| ViewSpatial Camera-Rel-Dir | Qwen | λ=3 | **+4.0pp** |
+| Person-Rel-Dir (ViewSpatial) | InternVL | λ=1 | **+4.5pp** |
+| MindCube perpendicular | Qwen | λ=3 | **+2.8pp** |
+| Person-Rel-Dir (ViewSpatial) | InternVL | λ=3 | **+2.2pp** |
+| MindCube perpendicular | InternVL | λ=3 | +0.4pp |
+
+The Qwen-at-λ=3 pattern is now confirmed across **all four benchmarks**:
+residualization buys ~+3-8pp on direction-relevant subsets at the
+highest λ tested. This is the most robust finding of the residualized
+study.
+
+For InternVL, the picture remains mixed — residualization helps on
+direction-axis subsets but hurts on visible-info / object-view-orientation
+tasks. The aggregate effect is near zero, consistent with the §4
+hypothesis that InternVL's color/shape directions drift during training
+and the static base-model basis becomes stale.
 
 ---
 

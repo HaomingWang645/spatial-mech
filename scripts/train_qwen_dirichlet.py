@@ -176,6 +176,7 @@ class Args:
     eval_every: int = 50
     n_eval: int = 50
     seed: int = 0
+    residualize_basis: Path | None = None
 
 
 def parse_args() -> Args:
@@ -196,6 +197,10 @@ def parse_args() -> Args:
     p.add_argument("--eval-every", type=int, default=50)
     p.add_argument("--n-eval", type=int, default=50)
     p.add_argument("--seed", type=int, default=0)
+    p.add_argument("--residualize-basis", type=Path, default=None,
+                   help="Path to .npz with key 'W' shape (d, k); if set, "
+                   "project H_obj onto the orthogonal complement of W's column "
+                   "span before computing the Dirichlet loss.")
     return Args(**vars(p.parse_args()))
 
 
@@ -393,6 +398,24 @@ def main():
     val_examples = JsonlDataset(args.val_jsonl).examples
     logger.info("Train: %d  Val: %d", len(train_ds), len(val_examples))
 
+    # Optional: load nuisance basis W ∈ R^(d, k) for residualization (Theorem 2).
+    # We pre-compute the projector P = I - W W^T once; per-step we right-multiply
+    # H_obj by P before Dirichlet loss.
+    nuisance_proj = None
+    if args.residualize_basis is not None:
+        import numpy as np
+        Wnpz = np.load(args.residualize_basis)
+        W = torch.from_numpy(Wnpz["W"]).to(device)  # (d, k)
+        d_in = W.shape[0]
+        # Verify orthonormality
+        ortho_err = float((W.T @ W - torch.eye(W.shape[1], device=device)).abs().max())
+        logger.info(
+            "Loaded residualization basis W: shape=%s ortho_err=%.2e",
+            tuple(W.shape), ortho_err,
+        )
+        # Build projector onto W^perp: P = I - W W^T (d × d)
+        nuisance_proj = (torch.eye(d_in, device=device) - W @ W.T).to(torch.float32)
+
     # No collate; we process one example at a time (image preprocessing is variable-size).
     loader = DataLoader(train_ds, batch_size=args.batch_size, shuffle=True,
                          collate_fn=lambda b: b)
@@ -448,6 +471,10 @@ def main():
                     H_obj = H_all[0, valid_pos].float()
                     X_obj = torch.tensor(
                         valid_X, device=device, dtype=torch.float32)
+                    if nuisance_proj is not None:
+                        # Project onto orthogonal complement of nuisance subspace.
+                        # H_obj: (n, d), nuisance_proj: (d, d) → H_obj @ P : (n, d)
+                        H_obj = H_obj @ nuisance_proj
                     dir_loss = dirichlet_ratio(H_obj, X_obj, tau=args.tau)
                 else:
                     dir_loss = torch.zeros((), device=device)

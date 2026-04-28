@@ -30,31 +30,52 @@ $x_i \in \mathbb{R}^3$.
 
 ### Non-residualized loss (v4–v8)
 
-The non-residualized Dirichlet-regularized SFT loss is
+The non-residualized Dirichlet-regularized SFT loss is, with the
+**bandwidth** $\tau$ made explicit:
 
 $$
-\boxed{\;\mathcal{L}^{\mathrm{nonres}}_\lambda(\theta) \;=\; \mathcal{L}_{\mathrm{LM}}(\theta) \;+\; \lambda \cdot \mathcal{R}_X\bigl(H_\theta\bigr),\;}
+\boxed{\;\mathcal{L}^{\mathrm{nonres}}_{\lambda, \tau}(\theta) \;=\; \mathcal{L}_{\mathrm{LM}}(\theta) \;+\; \lambda \cdot \mathcal{R}_{X, \tau}\bigl(H_\theta\bigr),\;}
 $$
 
-where the Dirichlet ratio $\mathcal{R}_X(H)$ is
+where the bandwidth-$\tau$ Dirichlet ratio $\mathcal{R}_{X, \tau}(H)$ is
 
 $$
-\mathcal{R}_X(H) \;=\; \frac{\mathcal{E}_X(H)}{\mathcal{E}_\pi(H)},\qquad \mathcal{E}_X(H) \;=\; \mathrm{tr}\bigl(H^\top L_X H\bigr) \;=\; \tfrac{1}{2}\sum_{i, j} W_{X, ij}\,\|h_i - h_j\|^2,
+\mathcal{R}_{X, \tau}(H) \;=\; \frac{\mathcal{E}_{X, \tau}(H)}{\mathcal{E}_{\pi, \tau}(H)},\qquad \mathcal{E}_{X, \tau}(H) \;=\; \mathrm{tr}\bigl(H^\top L_{X, \tau} H\bigr) \;=\; \tfrac{1}{2}\sum_{i, j} W_{X, ij}^{(\tau)}\,\|h_i - h_j\|^2,
 $$
 
-with $L_X = D_X - W_X$ the graph Laplacian built from a Gaussian kernel
-on the world coordinates,
+with $L_{X, \tau} = D_{X, \tau} - W_X^{(\tau)}$ the bandwidth-$\tau$
+graph Laplacian built from a Gaussian kernel on the world coordinates,
 
 $$
-W_{X, ij} \;=\; \exp\!\Bigl(-\tfrac{\|x_i - x_j\|^2}{2\tau^2}\Bigr) \quad (i \neq j),\qquad W_{X, ii} = 0,
+W_{X, ij}^{(\tau)} \;=\; \exp\!\Bigl(-\tfrac{\|x_i - x_j\|^2}{2\tau^2}\Bigr) \quad (i \neq j),\qquad W_{X, ii}^{(\tau)} = 0.
 $$
 
-and $\mathcal{E}_\pi(H)$ is the same energy with $X$ replaced by a
-*permuted* set of coordinates $\pi(X)$ — a permutation-baseline
-normalization that ensures $\mathcal{R}_X$ is approximately scale-free
-(value 1 corresponds to "no spatial smoothness", value 0 to "perfectly
-smooth"). In practice $\pi$ is a single fixed random permutation per
-example.
+The **kernel bandwidth $\tau > 0$** controls the *spatial scale* at
+which two objects count as neighbors:
+
+- *Small* $\tau$ ($\ll$ typical inter-object distance): edges only
+  between very close objects; the graph is sparse and the Laplacian's
+  spectrum reflects local geometric detail (high-frequency eigenmodes).
+- *Large* $\tau$ ($\gg$ scene diameter): all pairs have
+  $W_{ij}^{(\tau)} \approx 1$; the Laplacian becomes nearly
+  $nI - \mathbf{1}\mathbf{1}^\top$ and spatial information is washed
+  out.
+- *Intermediate* $\tau$ (≈ typical inter-object distance): meaningful
+  3D neighborhoods, the lowest 3 non-trivial eigenmodes are
+  well-separated, and Theorem 3 has its bite.
+
+In our experiments **$\tau = 2.0$ (meters)** for all training runs —
+ARKitScenes / ScanNet objects are typically 0.5–5 m apart, so $\tau$
+sits at neighborhood scale. The v6 ablation (REPORT_v6 §3) verified
+that the loss is **robust to $\tau$ in $[1.0, 4.0]$**: a 4× change in
+either direction stays within seed noise of the $\tau = 2.0$ baseline.
+
+The denominator $\mathcal{E}_{\pi, \tau}(H)$ is the same energy with
+$X$ replaced by a *permuted* set of coordinates $\pi(X)$ — a
+permutation-baseline normalization that makes $\mathcal{R}_{X, \tau}$
+approximately scale-free (value 1 corresponds to "no spatial
+smoothness", value 0 to "perfectly smooth"). In practice $\pi$ is a
+single fixed random permutation per example.
 
 ### Residualized loss (v9)
 
@@ -73,19 +94,19 @@ i.e., each row $h_i$ has the nuisance-component $W W^\top h_i$
 subtracted. The **residualized Dirichlet-regularized SFT loss** is
 
 $$
-\boxed{\;\mathcal{L}^{\mathrm{res}}_\lambda(\theta) \;=\; \mathcal{L}_{\mathrm{LM}}(\theta) \;+\; \lambda \cdot \mathcal{R}_X\!\bigl(H_\theta\, P_\perp\bigr) \;=\; \mathcal{L}_{\mathrm{LM}}(\theta) \;+\; \lambda \cdot \frac{\mathcal{E}_X(H_\theta\, P_\perp)}{\mathcal{E}_\pi(H_\theta\, P_\perp)},\;}
+\boxed{\;\mathcal{L}^{\mathrm{res}}_{\lambda, \tau}(\theta) \;=\; \mathcal{L}_{\mathrm{LM}}(\theta) \;+\; \lambda \cdot \mathcal{R}_{X, \tau}\!\bigl(H_\theta\, P_\perp\bigr) \;=\; \mathcal{L}_{\mathrm{LM}}(\theta) \;+\; \lambda \cdot \frac{\mathcal{E}_{X, \tau}(H_\theta\, P_\perp)}{\mathcal{E}_{\pi, \tau}(H_\theta\, P_\perp)},\;}
 $$
 
 with energies
 
 $$
-\mathcal{E}_X(H_\theta\, P_\perp) \;=\; \mathrm{tr}\bigl((H_\theta P_\perp)^\top L_X (H_\theta P_\perp)\bigr) \;=\; \tfrac{1}{2}\sum_{i,j} W_{X, ij}\,\|P_\perp h_i - P_\perp h_j\|^2.
+\mathcal{E}_{X, \tau}(H_\theta\, P_\perp) \;=\; \mathrm{tr}\bigl((H_\theta P_\perp)^\top L_{X, \tau} (H_\theta P_\perp)\bigr) \;=\; \tfrac{1}{2}\sum_{i,j} W_{X, ij}^{(\tau)}\,\|P_\perp h_i - P_\perp h_j\|^2.
 $$
 
-The kernel $W_X$, Laplacian $L_X$, bandwidth $\tau$, and permutation
-baseline are identical to the non-residualized version. The *only*
-difference is that $H_\theta$ is replaced by $H_\theta\, P_\perp$
-inside both energies.
+The kernel $W_X^{(\tau)}$, Laplacian $L_{X, \tau}$, bandwidth $\tau$,
+and permutation baseline are identical to the non-residualized version.
+The *only* difference is that $H_\theta$ is replaced by
+$H_\theta\, P_\perp$ inside both energies.
 
 ### Equivalent formulation
 
@@ -93,12 +114,24 @@ Using $\|P_\perp h_i - P_\perp h_j\|^2 = (h_i - h_j)^\top P_\perp (h_i - h_j)$
 since $P_\perp^2 = P_\perp$:
 
 $$
-\mathcal{E}_X(H_\theta\, P_\perp) \;=\; \tfrac{1}{2}\sum_{i,j} W_{X, ij}\,(h_i - h_j)^\top P_\perp\, (h_i - h_j).
+\mathcal{E}_{X, \tau}(H_\theta\, P_\perp) \;=\; \tfrac{1}{2}\sum_{i,j} W_{X, ij}^{(\tau)}\,(h_i - h_j)^\top P_\perp\, (h_i - h_j).
 $$
 
-This makes explicit that the loss penalizes representational
-*differences* projected onto the nuisance-orthogonal subspace, leaving
-the nuisance subspace itself unregularized.
+This makes explicit two things:
+
+1. **Where $\tau$ enters**: the kernel weight $W_{X, ij}^{(\tau)}$
+   determines *which pairs* $(i, j)$ contribute to the loss. Pairs of
+   objects close in 3D (small $\|x_i - x_j\|$) get large
+   $W_{X, ij}^{(\tau)} \approx 1$; pairs far apart get
+   $W_{X, ij}^{(\tau)} \approx 0$ and contribute little. So $\tau$
+   selects the *spatial scale* of the regularizer.
+2. **What residualization does**: the projector $P_\perp$ acts on
+   *representational differences* $(h_i - h_j)$, restricting the
+   penalty to the nuisance-orthogonal subspace. The nuisance subspace
+   $W$ itself is unregularized.
+
+Combining: at every pair $(i, j)$ closer than ~$\tau$ in 3D, the loss
+penalizes any non-nuisance variation between $h_i$ and $h_j$.
 
 ### 0.1. The nuisance basis $W$
 

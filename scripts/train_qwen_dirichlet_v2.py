@@ -63,6 +63,7 @@ class Args:
     warmup_steps: int = 50
     anneal_steps: int = 100
     lora_targets: str = "q_proj,k_proj,v_proj,o_proj"  # comma-sep
+    lora_layers: str = ""  # comma-sep layer indices, e.g. "17" or "13,17,21"; empty = all layers
 
 
 def parse_args() -> Args:
@@ -90,6 +91,9 @@ def parse_args() -> Args:
     p.add_argument("--warmup-steps", type=int, default=50)
     p.add_argument("--anneal-steps", type=int, default=100)
     p.add_argument("--lora-targets", default="q_proj,k_proj,v_proj,o_proj")
+    p.add_argument("--lora-layers", default="",
+                   help="Comma-separated layer indices to apply LoRA to (e.g. '17' or '13,17,21'); "
+                        "empty means apply to all layers (default).")
     return Args(**vars(p.parse_args()))
 
 
@@ -224,11 +228,18 @@ def main():
         args.model_id, torch_dtype=torch.bfloat16).to(device)
 
     target_modules = [t.strip() for t in args.lora_targets.split(",")]
-    lora_cfg = LoraConfig(
+    layers_to_transform = None
+    if args.lora_layers.strip():
+        layers_to_transform = [int(x.strip()) for x in args.lora_layers.split(",") if x.strip()]
+        logger.info("LoRA restricted to layers %s", layers_to_transform)
+    lora_kwargs = dict(
         r=args.lora_rank, lora_alpha=args.lora_rank * 2,
         target_modules=target_modules,
         lora_dropout=0.05, bias="none", task_type="CAUSAL_LM",
     )
+    if layers_to_transform is not None:
+        lora_kwargs["layers_to_transform"] = layers_to_transform
+    lora_cfg = LoraConfig(**lora_kwargs)
     model = get_peft_model(model, lora_cfg)
     model.print_trainable_parameters()
 

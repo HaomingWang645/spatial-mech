@@ -64,6 +64,7 @@ class Args:
     anneal_steps: int = 100
     lora_targets: str = "q_proj,k_proj,v_proj,o_proj"  # comma-sep
     lora_layers: str = ""  # comma-sep layer indices, e.g. "17" or "13,17,21"; empty = all layers
+    coord_shuffle: bool = False  # control: shuffle 3D coords inside each example
 
 
 def parse_args() -> Args:
@@ -94,6 +95,11 @@ def parse_args() -> Args:
     p.add_argument("--lora-layers", default="",
                    help="Comma-separated layer indices to apply LoRA to (e.g. '17' or '13,17,21'); "
                         "empty means apply to all layers (default).")
+    p.add_argument("--coord-shuffle", action="store_true",
+                   help="CONTROL: per-batch, randomly permute the 3D coordinates "
+                        "before computing the Dirichlet kernel. Removes scene-3D structure "
+                        "while preserving loss magnitude/distribution. Use to test whether "
+                        "gains depend on the geometric content of the kernel graph.")
     return Args(**vars(p.parse_args()))
 
 
@@ -341,6 +347,12 @@ def main():
                         if nuisance_proj is not None:
                             H_obj = H_obj @ nuisance_proj
                         X_obj = torch.tensor(valid_X, device=device, dtype=torch.float32)
+                        if args.coord_shuffle:
+                            # CONTROL: random permutation of 3D coords across the
+                            # objects in this example. Same magnitudes & shape;
+                            # different (meaningless) kernel graph.
+                            perm = torch.randperm(X_obj.shape[0], device=device)
+                            X_obj = X_obj[perm]
                         dir_terms.append(dirichlet_ratio(H_obj, X_obj, tau=args.tau))
                     dir_loss = sum(dir_terms) / len(dir_terms)
                 else:

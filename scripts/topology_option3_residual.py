@@ -165,6 +165,10 @@ def main() -> int:
     ap.add_argument("--layers", type=str, default=None)
     ap.add_argument("--limit-scenes", type=int, default=None)
     ap.add_argument("--pca-example-scenes", type=int, default=12)
+    ap.add_argument("--t-min", type=int, default=0,
+                    help="Only use frames with frame_id >= t-min (latter-frames filter). "
+                    "Applied before residualization, so conditional means use the same "
+                    "frame subset as the pooled topology metrics.")
     ap.add_argument("--seed", type=int, default=0)
     args = ap.parse_args()
 
@@ -203,6 +207,8 @@ def main() -> int:
     for layer in layers:
         df, vecs = load_layer(act_dir, layer)
         df = df[df["scene_id"].isin(scenes)]
+        if args.t_min > 0:
+            df = df[df["frame_id"] >= args.t_min]
 
         df_lab = attach_labels(df, labels)
         if len(df_lab) == 0:

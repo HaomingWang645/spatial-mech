@@ -31,6 +31,24 @@ import numpy as np
 import pandas as pd
 
 
+def procrustes_align(X: np.ndarray, Y: np.ndarray) -> np.ndarray:
+    """Translate + rotate/reflect + uniformly scale ``X`` to best match ``Y``.
+
+    PCA is rotation/sign-ambiguous; without this step each panel is plotted
+    in an arbitrary frame and the eye cannot judge whether the layout
+    matches GT. With it, the residual visual mismatch after alignment
+    *is* the geometric error.
+    """
+    Xc = X - X.mean(axis=0, keepdims=True)
+    Yc = Y - Y.mean(axis=0, keepdims=True)
+    M = Yc.T @ Xc
+    U, S, Vt = np.linalg.svd(M, full_matrices=False)
+    R = U @ Vt
+    denom = float((Xc ** 2).sum())
+    s = float(S.sum() / denom) if denom > 1e-12 else 1.0
+    return (Xc @ R.T) * s + Y.mean(axis=0, keepdims=True)
+
+
 def knn_edges(P: np.ndarray, k: int = 2) -> list[tuple[int, int]]:
     n = P.shape[0]
     k = min(k, n - 1)
@@ -93,11 +111,20 @@ def plot_scene(
         r, c = divmod(slot, cols)
         ax = fig.add_subplot(gs[r, c])
         pc = layer_to_pc[lyr]["pc"]
+        # Align each layer's PCA panel to the GT 2D positions via Procrustes
+        # so the eye can directly compare layout shapes; alignment is a
+        # similarity transform (rotation+reflection+scale+translate), so it
+        # preserves all topology metrics.
+        pc_aligned = procrustes_align(pc[:, :2], P[:, :2])
         for (a, b) in edges:
-            ax.plot([pc[a, 0], pc[b, 0]], [pc[a, 1], pc[b, 1]], color="0.82", lw=0.8, zorder=0)
+            ax.plot([pc_aligned[a, 0], pc_aligned[b, 0]],
+                    [pc_aligned[a, 1], pc_aligned[b, 1]],
+                    color="0.82", lw=0.8, zorder=0)
         for k, oid in enumerate(oids):
-            ax.scatter(pc[k, 0], pc[k, 1], s=95, color=_obj_color(int(oid)), edgecolor="k", lw=0.6)
-            ax.text(pc[k, 0], pc[k, 1], str(int(oid)), fontsize=6.5, ha="center", va="center")
+            ax.scatter(pc_aligned[k, 0], pc_aligned[k, 1], s=95,
+                       color=_obj_color(int(oid)), edgecolor="k", lw=0.6)
+            ax.text(pc_aligned[k, 0], pc_aligned[k, 1], str(int(oid)),
+                    fontsize=6.5, ha="center", va="center")
         if lyr in scene_metrics.index:
             m = scene_metrics.loc[lyr]
             title = (

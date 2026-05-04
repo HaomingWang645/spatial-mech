@@ -167,6 +167,11 @@ def main():
     p.add_argument("--out", type=Path, required=True)
     p.add_argument("--n-eval", type=int, default=-1)
     p.add_argument("--mc-only", action="store_true")
+    p.add_argument("--ablate-Q", type=Path, default=None,
+                   help="NPZ file with key 'Q' of shape (d, k). Project residual"
+                        " stream away from this subspace at --ablate-layer.")
+    p.add_argument("--ablate-layer", type=int, default=17,
+                   help="Layer index where the ablation hook is installed.")
     args = p.parse_args()
 
     logging.basicConfig(level=logging.INFO,
@@ -187,6 +192,24 @@ def main():
         model = base
         logger.info("Evaluating un-tuned base model")
     model.eval()
+
+    # Install optional ablation hook
+    ablation_handle = None
+    if args.ablate_Q is not None:
+        import numpy as _np
+        Q_np = _np.load(args.ablate_Q, allow_pickle=True)["Q"].astype(_np.float32)
+        Q = torch.from_numpy(Q_np).to(device).to(torch.bfloat16)
+        # Find layer module
+        base_model = model.base_model.model if hasattr(model, "base_model") else model
+        layer_module = base_model.model.language_model.layers[args.ablate_layer]
+        def _ablate_fn(_mod, _inp, out):
+            h = out[0] if isinstance(out, tuple) else out
+            proj = h @ Q             # (B, T, k)
+            new_h = h - proj @ Q.T   # project away
+            return (new_h,) + out[1:] if isinstance(out, tuple) else new_h
+        ablation_handle = layer_module.register_forward_hook(_ablate_fn)
+        logger.info("Ablation hook installed at L%d, Q shape=%s",
+                    args.ablate_layer, tuple(Q_np.shape))
 
     val = JsonlDataset(args.vsi_jsonl).examples
     if args.mc_only:
@@ -229,6 +252,8 @@ def main():
     summary = {
         "checkpoint": str(args.checkpoint) if args.checkpoint else "base",
         "model_id": args.model_id,
+        "ablate_Q": str(args.ablate_Q) if args.ablate_Q else None,
+        "ablate_layer": args.ablate_layer if args.ablate_Q else None,
         "n_total": len(val),
         "n_correct": correct_total,
         "accuracy": correct_total / max(len(val), 1),

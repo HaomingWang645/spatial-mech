@@ -33,3 +33,32 @@ Thumbs.db
 
 # Logs (optional — remove this line if you want logs tracked)
 logs/
+
+# Per-scene BEV thumbnails (5k+ files, regenerable)
+figures/scenes_3d_bev/
+
+# Per-scene detailed PCA topology figures (regenerable)
+figures/topology_option3_residual/**/detailed_pca_s_*.png
+
+# Reports and figures (regenerable / large)
+reports/
+figures/
+
+# Paper draft sources and build artifacts (root only — does not affect paper_code/)
+/*.tex
+/*.pdf
+/*.md
+/*.sty
+/*.bbl
+/*.blg
+/*.aux
+/*.log
+/*.out
+/*.toc
+/*.bib
+/*.synctex.gz
+/*.fdb_latexmk
+/*.fls
+
+# Related papers folder
+related papers/
